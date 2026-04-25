@@ -16,3 +16,7 @@ node_modules/
 
 # Bỏ qua file môi trường
 .env
+
+.txt
+.vpp
+.docx
