@@ -1,0 +1,18 @@
+# Bỏ qua file biên dịch
+*.o
+*.class
+*.exe
+
+# Bỏ qua thư mục build
+/build/
+dist/
+
+# Bỏ qua file cấu hình hệ thống
+*.log
+*.tmp
+
+# Bỏ qua thư mục node_modules (dự án Node.js)
+node_modules/
+
+# Bỏ qua file môi trường
+.env

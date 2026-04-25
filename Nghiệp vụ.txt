@@ -1,0 +1,63 @@
+1. Phân hệ Khách hàng (Customer UI - Web/Mobile App)
+**Đóng vai trò là điểm chạm số hóa tại bàn, biến điện thoại của khách thành một thiết bị giao tiếp hai chiều.
+
+Đặt bàn trực tuyến (Online Reservation): Khách hàng chủ động lựa chọn ngày giờ, số lượng người và ghi chú yêu cầu đặc biệt qua Web/App. Hệ thống tự động phân luồng: cấp mã xác nhận và giữ chỗ ngay cho nhóm nhỏ (dưới 8 người), hoặc đưa vào trạng thái chờ xử lý đối với đoàn đông để nhân viên liên hệ sắp xếp không gian phù hợp nhằm tối ưu công suất bàn.
+
+Quét QR & Khởi tạo Phiên (Session Initialization): Khi khách quét mã QR tĩnh tại bàn, hệ thống kiểm tra trạng thái bàn và tự động khởi tạo một ChatSession mới. Khách hàng được cấp một định danh ẩn danh (guestId) lưu dưới dạng JWT Cookie (có thời hạn). Cơ chế này giúp khách hàng không cần đăng nhập mà vẫn giữ được lịch sử giao tiếp trong suốt bữa ăn, đồng thời ngăn chặn truy cập trái phép từ bên ngoài.
+
+Tự đặt món (Self-Ordering): Khách hàng duyệt Thực đơn điện tử (E-Menu), chọn món và thêm ghi chú (VD: "ít cay"). Khi xác nhận, Đơn hàng (Order) được gửi lên hệ thống với trạng thái WAITING_APPROVAL (Chờ duyệt). Trạng thái này là chốt chặn bảo mật, giúp ngăn chặn việc khách ấn nhầm hoặc spam gọi món ảo.
+
+Giao tiếp Thời gian thực (Real-time Live Chat): Khách hàng sử dụng cửa sổ chat tích hợp để yêu cầu hỗ trợ (xin thêm đá, giấy ăn, giục lên món...). Hệ thống định tuyến tin nhắn chính xác đến màn hình điều khiển của nhân viên phụ trách thông qua kết nối Socket.io.
+
+Theo dõi Trạng thái Đơn hàng: Khách hàng theo dõi trực tiếp tiến độ món ăn trên điện thoại (Đã duyệt -> Đang nấu -> Sẵn sàng).
+
+2. Phân hệ POS & Thu Ngân (Staff & Cashier Dashboard)
+**Đóng vai trò là trung tâm điều khiển tại quầy, tích hợp toàn bộ nghiệp vụ phục vụ, kiểm duyệt và thanh toán.
+
+Quản lý Bàn & Đón khách: Trực quan hóa sơ đồ bàn theo thời gian thực và nhận cảnh báo khách đặt bàn online vượt ngưỡng để gọi điện tư vấn. Khi khách đến, nhân viên check-in chuyển trạng thái bàn sang OCCUPIED (tự động kích hoạt sẵn ChatSession), đồng thời hỗ trợ hủy lịch giải phóng bàn nếu khách đến trễ (No-show).
+
+Kiểm duyệt Đơn hàng (Order Approval): Khi có Order từ mã QR, hệ thống "Ping" cảnh báo. Nhân viên xác nhận khách tại bàn và bấm "Duyệt", chuyển đơn hàng từ WAITING_APPROVAL sang PENDING để đẩy lệnh in xuống Bếp.
+
+Order Trực tiếp (Direct Take-Order): Đối với khách không dùng điện thoại, nhân viên sử dụng POS để gọi món thay khách. Đơn hàng tạo từ kênh này đi thẳng vào trạng thái PENDING.
+
+Tổng đài Hỗ trợ (Chat Hub): Hiển thị màn hình Live Chat tổng hợp, nhận tin nhắn từ các bàn và phản hồi trực tiếp cho khách hàng (VD: "Dạ vâng, em mang ra ngay ạ").
+
+Đồng bộ Phục vụ (Kitchen Sync): Nhận thông báo tự động từ Bếp khi món ăn READY, chỉ đạo bồi bàn mang thức ăn ra và đổi trạng thái thành SERVED.
+
+Thanh toán & Reset Phiên (Checkout & Session Reset - Nghiệp vụ cốt lõi):
+
+Hệ thống tự động gom toàn bộ các đơn (Order) phát sinh trong cùng một Phiên (ChatSession) vào một Hóa đơn (Invoice).
+
+Hỗ trợ thanh toán đa phương thức (Tiền mặt, Thẻ, Chuyển khoản QR).
+
+Reset tự động: Khi hóa đơn cập nhật isPaid: true, hệ thống lập tức giải phóng bàn (AVAILABLE), khóa Phiên giao tiếp (ChatSession.isActive = false), và phát tín hiệu Socket ngắt kết nối/xóa trí nhớ trình duyệt trên điện thoại của khách, dọn dẹp sạch sẽ dữ liệu để đón lượt khách tiếp theo.
+
+Chốt ca & Đối soát: Ghi nhận quỹ tiền mặt đầu/cuối ca, đối soát doanh thu thực tế so với dữ liệu hệ thống để bàn giao.
+
+3. Phân hệ Bếp (Kitchen Display System - KDS)
+**Tối ưu hóa luồng chế biến, loại bỏ hoàn toàn hóa đơn giấy và tích hợp kiểm soát hao hụt kho.
+
+Quản lý Danh sách chờ (Order Queue): Hiển thị các món ăn đã được nhân viên duyệt (PENDING), tự động sắp xếp theo thứ tự thời gian order hoặc gom nhóm các món giống nhau để chế biến cùng mẻ.
+
+Cập nhật Tiến độ thực tế: Đầu bếp thao tác trên màn hình cảm ứng để đổi trạng thái thực tế của món: Đang nấu (COOKING) -> Đã hoàn thành (READY).
+
+Thông báo Tự động (Auto-Ping): Thao tác báo READY của bếp sẽ tự động kích hoạt thông báo trên màn hình POS của nhân viên phục vụ.
+
+Nghiệp vụ Quản lý Kho (Inventory Transactions):
+
+Đầu bếp thực hiện việc kiểm kê nguyên vật liệu đầu ca (AUDIT_START) và cuối ca (AUDIT_END).
+
+Ghi nhận trực tiếp các giao dịch xuất kho bất thường hoặc hủy nguyên liệu hỏng/hao hụt (EXPORT).
+
+4. Phân hệ Quản trị (Admin Dashboard)
+**Cung cấp bức tranh toàn cảnh và các công cụ thiết lập cốt lõi cho Chủ nhà hàng.
+
+Quản lý Thực đơn (Menu Management): Quản lý danh mục và danh sách món ăn. Chức năng cập nhật trạng thái "Hết món" theo thời gian thực sẽ lập tức làm mờ/ẩn món đó trên Menu QR của toàn bộ khách hàng.
+
+Quản lý Sơ đồ Bàn & Mã QR: Thiết lập khu vực, tạo bàn, cài đặt sức chứa và kết xuất hình ảnh QR định danh tĩnh cho từng bàn để in ấn.
+
+Quản lý Chuỗi Cung ứng (Supply Chain): Quản lý hồ sơ Nhà cung cấp (Supplier), theo dõi tồn kho nguyên vật liệu (Ingredient) và thiết lập cảnh báo khi lượng tồn kho dưới mức tối thiểu (minStock).
+
+Quản lý Nhân sự & Phân quyền (Role Based Access Control): Cấp phát tài khoản và giới hạn quyền hạn truy cập theo chức năng (Admin, Waiter/Cashier, Kitchen).
+
+Báo cáo & Phân tích (Analytics): Trích xuất các báo cáo doanh thu theo kỳ, phân tích món ăn bán chạy, tỷ lệ lấp đầy bàn và chi phí hao hụt nguyên vật liệu để đưa ra quyết định kinh doanh.

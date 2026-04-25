@@ -1,0 +1,235 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(uuid())
+  username          String             @unique
+  password          String
+  fullName          String
+  role              Role
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  ordersCreated     Order[]            @relation("WaiterOrders")
+  stockTransactions StockTransaction[]
+}
+
+model Table {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  capacity     Int
+  status       TableStatus   @default(AVAILABLE)
+  qrCode       String?       @unique
+  orders       Order[]
+  reservations Reservation[]
+  chatSessions ChatSession[]
+  invoices     Invoice[]
+}
+
+model Reservation {
+  id              String   @id @default(uuid())
+  customerName    String
+  phone           String
+  reservationTime DateTime
+  guestCount      Int
+  status          String   @default("PENDING")
+  tableId         String
+  table           Table    @relation(fields: [tableId], references: [id])
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  menuItems MenuItem[]
+}
+
+model MenuItem {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  isAvailable Boolean     @default(true)
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  status        OrderStatus @default(PENDING)
+  totalAmount   Float       @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  tableId       String
+  waiterId      String?
+  chatSessionId String?
+  invoiceId     String?
+  invoice       Invoice?    @relation(fields: [invoiceId], references: [id])
+  table         Table       @relation(fields: [tableId], references: [id])
+  waiter        User?       @relation("WaiterOrders", fields: [waiterId], references: [id])
+  chatSession   ChatSession? @relation(fields: [chatSessionId], references: [id])
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  quantity    Int
+  priceAtTime Float
+  notes       String?
+  isDone      Boolean  @default(false)
+  orderId     String
+  menuItemId  String
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  order       Order    @relation(fields: [orderId], references: [id])
+}
+
+model Invoice {
+  id          String    @id @default(uuid())
+  subTotal    Float
+  tax         Float     @default(0)
+  discount    Float     @default(0)
+  finalAmount Float
+  isPaid      Boolean   @default(true)
+  issuedAt    DateTime  @default(now())
+
+  tableId     String
+  table       Table     @relation(fields: [tableId], references: [id])
+
+  chatSessionId String? @unique
+  chatSession   ChatSession? @relation(fields: [chatSessionId], references: [id])
+
+  orders      Order[]
+  payments    Payment[]
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  amount    Float
+  method    PaymentMethod
+  paidAt    DateTime      @default(now())
+  invoiceId String
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id])
+}
+
+model Supplier {
+  id          String       @id @default(uuid())
+  name        String
+  contact     String?
+  address     String?
+  createdAt   DateTime     @default(now())
+  ingredients Ingredient[]
+}
+
+model Ingredient {
+  id           String             @id @default(uuid())
+  name         String
+  unit         String
+  currentStock Float              @default(0)
+  minStock     Float              @default(5)
+  supplierId   String?
+  supplier     Supplier?          @relation(fields: [supplierId], references: [id])
+  transactions StockTransaction[]
+}
+
+model StockTransaction {
+  id           String          @id @default(uuid())
+  type         TransactionType
+  quantity     Float
+  note         String?
+  createdAt    DateTime        @default(now())
+  ingredientId String
+  userId       String
+  ingredient   Ingredient      @relation(fields: [ingredientId], references: [id])
+  user         User            @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  WAITER
+  KITCHEN
+  CASHIER
+}
+
+enum TableStatus {
+  AVAILABLE
+  RESERVED
+  OCCUPIED
+  CLEANING
+}
+
+enum OrderStatus {
+  PENDING
+  COOKING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+  WAITING_APPROVAL
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  E_WALLET
+}
+
+enum TransactionType {
+  IMPORT
+  EXPORT
+  AUDIT_START
+  AUDIT_END
+}
+
+// ==========================================
+// MODULE: CHAT REAL-TIME (ẨN DANH & RESET PHIÊN)
+// ==========================================
+
+// Quản lý Phiên Chat theo từng lượt khách
+model ChatSession {
+  id        String    @id @default(uuid())
+  
+  // Trạng thái Phiên: 
+  // - True: Đang mở (Khách đang ăn).
+  // - False: Đã thanh toán, khóa phiên lại.
+  isActive  Boolean   @default(true) 
+  
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+ 
+  tableId   String
+  table     Table     @relation(fields: [tableId], references: [id])
+  
+  messages  Message[]
+  orders    Order[]
+  invoice   Invoice?
+}
+
+enum SenderType {
+  CUSTOMER
+  STAFF
+}
+
+// Lưu trữ tin nhắn (Hoàn toàn ẩn danh với khách)
+model Message {
+  id            String      @id @default(uuid())
+  content       String      @db.Text
+  
+  senderType    SenderType
+  
+  // Nơi chứa "Căn cước ẩn danh":
+  // - Nếu là Khách: Lưu cái mã `guestId` sinh ra từ JWT (VD: "guest_x8f9a")
+  // - Nếu là Nhân viên: Lưu ID của tài khoản nhân viên (VD: "user_123")
+  senderId      String      
+  
+  createdAt     DateTime    @default(now())
+  
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
+}

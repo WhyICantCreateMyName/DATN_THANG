@@ -1,0 +1,272 @@
+import type { Request, Response } from 'express';
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+const router = Router();
+
+router.get('/tables', async (req: Request, res: Response) => {
+    try {
+        let page = parseInt(req.query.page as string) || 1;
+        let limit = parseInt(req.query.limit as string) || 12;
+        if (limit > 50) limit = 50;
+
+        const skip = (page - 1) * limit;
+
+        const [tables, total] = await Promise.all([
+            prisma.table.findMany({ skip, take: limit }),
+            prisma.table.count()
+        ]);
+
+        res.status(200).json({
+            data: tables,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Lỗi lấy danh sách bàn' });
+    }
+});
+
+router.get('/tables/qrcode/:qrCode', async (req: Request, res: Response) => {
+    try {
+        const { qrCode } = req.params;
+        const table = await prisma.table.findUnique({
+            where: { qrCode: qrCode as string }
+        });
+
+        if (!table) {
+            return res.status(404).json({ error: 'Không tìm thấy bàn với mã QR này' });
+        }
+
+        // Tìm hoặc tạo Phiên Chat đang hoạt động cho bàn này
+        let activeSession = await prisma.chatSession.findFirst({
+            where: {
+                tableId: table.id,
+                isActive: true
+            },
+            include: {
+                messages: {
+                    orderBy: { createdAt: 'asc' }
+                }
+            }
+        });
+
+        if (!activeSession) {
+            activeSession = await prisma.chatSession.create({
+                data: {
+                    tableId: table.id,
+                    isActive: true
+                },
+                include: {
+                    messages: true
+                }
+            });
+        }
+
+        // Lấy danh sách các đơn hàng đã đặt trong phiên này
+        const orders = await prisma.order.findMany({
+            where: {
+                tableId: table.id,
+                createdAt: { gte: activeSession.startTime }
+            },
+            include: {
+                items: { include: { menuItem: true } }
+            }
+        });
+
+        res.status(200).json({
+            data: {
+                table,
+                chatSession: activeSession,
+                orders: orders
+            }
+        });
+    } catch (error) {
+        console.error('QR Verification Error:', error);
+        res.status(500).json({ error: 'Lỗi khi tìm bàn bằng mã QR' });
+    }
+});
+
+
+router.post('/tables', async (req: Request, res: Response) => {
+    try {
+        const { name, capacity, qrCode } = req.body;
+        const newTable = await prisma.table.create({
+            data: { name, capacity, qrCode }
+        });
+        res.status(201).json(newTable);
+    } catch (error) {
+        res.status(400).json({ error: 'Lỗi tạo bàn' });
+    }
+});
+
+router.put('/tables/:id', async (req: Request, res: Response) => {
+    try {
+        const { name, capacity, status, qrCode } = req.body;
+        const updated = await prisma.table.update({
+            where: { id: req.params.id as string },
+            data: { name, capacity, status, qrCode }
+        });
+        res.status(200).json(updated);
+    } catch (error) {
+        res.status(400).json({ error: 'Lỗi cập nhật bàn' });
+    }
+});
+
+router.delete('/tables/:id', async (req: Request, res: Response) => {
+    try {
+        await prisma.table.delete({ where: { id: req.params.id as string } });
+        res.status(204).send();
+    } catch (error) {
+        res.status(400).json({ error: 'Lỗi xóa bàn' });
+    }
+});
+
+// Thanh toán và kết thúc phiên (Giải phóng bàn)
+router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Tìm phiên chat đang hoạt động
+            const activeSession = await tx.chatSession.findFirst({
+                where: { tableId: String(id), isActive: true },
+                include: { orders: true }
+            });
+
+            if (!activeSession) {
+                throw new Error('Không tìm thấy phiên hoạt động cho bàn này');
+            }
+
+            // 2. Lấy tất cả các đơn hàng chưa thanh toán thuộc phiên này
+            // Gom cả đơn đã duyệt và đơn đang chờ (để thanh toán dứt điểm)
+            const ordersToPay = activeSession.orders.filter(o => 
+                ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'].includes(o.status)
+            );
+
+            if (ordersToPay.length === 0) {
+                // Nếu không có đơn nào, chỉ cần đóng bàn
+                await tx.chatSession.update({
+                    where: { id: activeSession.id },
+                    data: { isActive: false, endTime: new Date() }
+                });
+                await tx.table.update({
+                    where: { id: String(id) },
+                    data: { status: 'AVAILABLE' }
+                });
+                return { message: 'Đã giải phóng bàn (Không có đơn hàng)' };
+            }
+
+            const totalAmount = ordersToPay.reduce((sum, o) => sum + o.totalAmount, 0);
+
+            // 3. Tạo Hóa đơn (Invoice)
+            const invoice = await tx.invoice.create({
+                data: {
+                    subTotal: totalAmount,
+                    finalAmount: totalAmount,
+                    tableId: String(id),
+                    chatSessionId: activeSession.id,
+                    isPaid: true,
+                    // Kết nối tất cả các đơn hàng vào hóa đơn này
+                    orders: {
+                        connect: ordersToPay.map(o => ({ id: o.id }))
+                    }
+                }
+            });
+
+            // 4. Cập nhật trạng thái các đơn hàng thành COMPLETED
+            await tx.order.updateMany({
+                where: { id: { in: ordersToPay.map(o => o.id) } },
+                data: { status: 'COMPLETED' }
+            });
+
+            // 5. Đóng phiên chat hiện tại
+            await tx.chatSession.update({
+                where: { id: activeSession.id },
+                data: { isActive: false, endTime: new Date() }
+            });
+
+            // 6. Chuyển trạng thái bàn về Sẵn sàng
+            await tx.table.update({
+                where: { id: String(id) },
+                data: { status: 'AVAILABLE' }
+            });
+
+            return { message: 'Thanh toán thành công', invoiceId: invoice.id, total: totalAmount };
+        });
+
+        res.status(200).json(result);
+    } catch (error: any) {
+        console.error('Checkout Error:', error);
+        res.status(500).json({ error: error.message || 'Lỗi khi thực hiện thanh toán' });
+    }
+});
+
+// Gộp bàn (Chuyển toàn bộ đơn hàng từ bàn A sang bàn B)
+router.post('/tables/merge', async (req: Request, res: Response) => {
+    try {
+        const { sourceTableId, targetTableId } = req.body;
+
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Tìm phiên hoạt động của bàn nguồn
+            const sourceSession = await tx.chatSession.findFirst({
+                where: { tableId: sourceTableId, isActive: true }
+            });
+
+            if (!sourceSession) throw new Error('Bàn nguồn không có phiên hoạt động');
+
+            // 2. Tìm hoặc tạo phiên hoạt động cho bàn đích
+            let targetSession = await tx.chatSession.findFirst({
+                where: { tableId: targetTableId, isActive: true }
+            });
+
+            if (!targetSession) {
+                targetSession = await tx.chatSession.create({
+                    data: { tableId: targetTableId, isActive: true }
+                });
+                await tx.table.update({
+                    where: { id: targetTableId },
+                    data: { status: 'OCCUPIED' }
+                });
+            }
+
+            // 3. Di chuyển toàn bộ Order sang bàn đích và phiên đích
+            await tx.order.updateMany({
+                where: { chatSessionId: sourceSession.id },
+                data: {
+                    tableId: targetTableId,
+                    chatSessionId: targetSession.id
+                }
+            });
+
+            // 4. Đóng phiên bàn nguồn
+            await tx.chatSession.update({
+                where: { id: sourceSession.id },
+                data: { isActive: false, endTime: new Date() }
+            });
+
+            // 5. Giải phóng bàn nguồn
+            await tx.table.update({
+                where: { id: sourceTableId },
+                data: { status: 'AVAILABLE' }
+            });
+
+            return { message: 'Gộp bàn thành công', targetTableId };
+        });
+
+        const { io } = require('../index');
+        if (io) io.emit('staff_notification', { type: 'TABLE_UPDATED' });
+
+        res.status(200).json(result);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message || 'Lỗi khi gộp bàn' });
+    }
+});
+
+export default router;
