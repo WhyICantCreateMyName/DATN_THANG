@@ -10,7 +10,7 @@ router.get('/chat/:tableId/messages', async (req: Request, res: Response) => {
     try {
         const { tableId } = req.params;
         const activeSession = await prisma.chatSession.findFirst({
-            where: { tableId, isActive: true },
+            where: { tableId: String(tableId), isActive: true },
             include: {
                 messages: {
                     orderBy: { createdAt: 'asc' }
