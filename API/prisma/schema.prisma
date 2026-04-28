@@ -32,14 +32,14 @@ model Table {
 }
 
 model Reservation {
-  id              String   @id @default(uuid())
+  id              String            @id @default(uuid())
   customerName    String
   phone           String
   reservationTime DateTime
   guestCount      Int
-  status          String   @default("PENDING")
+  status          ReservationStatus @default(PENDING)
   tableId         String
-  table           Table    @relation(fields: [tableId], references: [id])
+  table           Table             @relation(fields: [tableId], references: [id])
 }
 
 model Category {
@@ -58,6 +58,19 @@ model MenuItem {
   categoryId  String
   category    Category    @relation(fields: [categoryId], references: [id])
   orderItems  OrderItem[]
+  ingredients MenuItemIngredient[]
+}
+
+model MenuItemIngredient {
+  id           String     @id @default(uuid())
+  menuItemId   String
+  ingredientId String
+  quantity     Float      // Lượng tiêu hao (g, ml, cái, v.v.)
+  
+  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([menuItemId, ingredientId])
 }
 
 model Order {
@@ -78,15 +91,15 @@ model Order {
 }
 
 model OrderItem {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   quantity    Int
   priceAtTime Float
   notes       String?
-  isDone      Boolean  @default(false)
+  status      OrderItemStatus @default(PENDING)
   orderId     String
   menuItemId  String
-  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
-  order       Order    @relation(fields: [orderId], references: [id])
+  menuItem    MenuItem        @relation(fields: [menuItemId], references: [id])
+  order       Order           @relation(fields: [orderId], references: [id])
 }
 
 model Invoice {
@@ -101,7 +114,7 @@ model Invoice {
   tableId     String
   table       Table     @relation(fields: [tableId], references: [id])
 
-  chatSessionId String? @unique
+  chatSessionId String?
   chatSession   ChatSession? @relation(fields: [chatSessionId], references: [id])
 
   orders      Order[]
@@ -118,12 +131,12 @@ model Payment {
 }
 
 model Supplier {
-  id          String       @id @default(uuid())
-  name        String
-  contact     String?
-  address     String?
-  createdAt   DateTime     @default(now())
-  ingredients Ingredient[]
+  id           String             @id @default(uuid())
+  name         String
+  contact      String?
+  address      String?
+  createdAt    DateTime           @default(now())
+  transactions StockTransaction[]
 }
 
 model Ingredient {
@@ -132,9 +145,8 @@ model Ingredient {
   unit         String
   currentStock Float              @default(0)
   minStock     Float              @default(5)
-  supplierId   String?
-  supplier     Supplier?          @relation(fields: [supplierId], references: [id])
   transactions StockTransaction[]
+  menuItems    MenuItemIngredient[]
 }
 
 model StockTransaction {
@@ -145,13 +157,14 @@ model StockTransaction {
   createdAt    DateTime        @default(now())
   ingredientId String
   userId       String
+  supplierId   String?
   ingredient   Ingredient      @relation(fields: [ingredientId], references: [id])
   user         User            @relation(fields: [userId], references: [id])
+  supplier     Supplier?       @relation(fields: [supplierId], references: [id])
 }
 
 enum Role {
   ADMIN
-  WAITER
   KITCHEN
   CASHIER
 }
@@ -187,6 +200,22 @@ enum TransactionType {
   AUDIT_END
 }
 
+enum OrderItemStatus {
+  PENDING
+  COOKING
+  READY
+  SERVED
+  CANCELLED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
 // ==========================================
 // MODULE: CHAT REAL-TIME (ẨN DANH & RESET PHIÊN)
 // ==========================================
@@ -208,7 +237,7 @@ model ChatSession {
   
   messages  Message[]
   orders    Order[]
-  invoice   Invoice?
+  invoices  Invoice[]
 }
 
 enum SenderType {

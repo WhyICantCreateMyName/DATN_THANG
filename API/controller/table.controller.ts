@@ -36,6 +36,8 @@ router.get('/tables', async (req: Request, res: Response) => {
 router.get('/tables/qrcode/:qrCode', async (req: Request, res: Response) => {
     try {
         const { qrCode } = req.params;
+        const { guestId } = req.query; // Nhận guestId từ client
+
         const table = await prisma.table.findUnique({
             where: { qrCode: qrCode as string }
         });
@@ -52,6 +54,12 @@ router.get('/tables/qrcode/:qrCode', async (req: Request, res: Response) => {
             },
             include: {
                 messages: {
+                    where: {
+                        OR: [
+                            { senderId: String(guestId) },
+                            { senderType: 'STAFF' }
+                        ]
+                    },
                     orderBy: { createdAt: 'asc' }
                 }
             }
@@ -64,7 +72,7 @@ router.get('/tables/qrcode/:qrCode', async (req: Request, res: Response) => {
                     isActive: true
                 },
                 include: {
-                    messages: true
+                    messages: true // Phiên mới thì chưa có tin nhắn nên không cần lọc phức tạp
                 }
             });
         }
@@ -132,9 +140,9 @@ router.delete('/tables/:id', async (req: Request, res: Response) => {
 router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        const { orderIds } = req.body;
 
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Tìm phiên chat đang hoạt động
             const activeSession = await tx.chatSession.findFirst({
                 where: { tableId: String(id), isActive: true },
                 include: { orders: true }
@@ -144,14 +152,51 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                 throw new Error('Không tìm thấy phiên hoạt động cho bàn này');
             }
 
-            // 2. Lấy tất cả các đơn hàng chưa thanh toán thuộc phiên này
-            // Gom cả đơn đã duyệt và đơn đang chờ (để thanh toán dứt điểm)
-            const ordersToPay = activeSession.orders.filter(o => 
+            let ordersToPay = activeSession.orders.filter(o => 
                 ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'].includes(o.status)
             );
 
-            if (ordersToPay.length === 0) {
-                // Nếu không có đơn nào, chỉ cần đóng bàn
+            if (orderIds && Array.isArray(orderIds) && orderIds.length > 0) {
+                ordersToPay = ordersToPay.filter(o => orderIds.includes(o.id));
+            }
+
+            let totalAmount = 0;
+            let invoiceId = null;
+
+            if (ordersToPay.length > 0) {
+                totalAmount = ordersToPay.reduce((sum, o) => sum + o.totalAmount, 0);
+
+                const invoice = await tx.invoice.create({
+                    data: {
+                        subTotal: totalAmount,
+                        finalAmount: totalAmount,
+                        tableId: String(id),
+                        chatSessionId: activeSession.id,
+                        isPaid: true,
+                        orders: {
+                            connect: ordersToPay.map(o => ({ id: o.id }))
+                        }
+                    }
+                });
+                invoiceId = invoice.id;
+
+                await tx.order.updateMany({
+                    where: { id: { in: ordersToPay.map(o => o.id) } },
+                    data: { status: 'COMPLETED' }
+                });
+            }
+
+            // Kiểm tra xem còn đơn hàng nào chưa thanh toán không
+            const remaining = await tx.order.count({
+                where: {
+                    chatSessionId: activeSession.id,
+                    status: { in: ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'] }
+                }
+            });
+
+            const isFullyPaid = remaining === 0;
+
+            if (isFullyPaid) {
                 await tx.chatSession.update({
                     where: { id: activeSession.id },
                     data: { isActive: false, endTime: new Date() }
@@ -160,48 +205,25 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                     where: { id: String(id) },
                     data: { status: 'AVAILABLE' }
                 });
-                return { message: 'Đã giải phóng bàn (Không có đơn hàng)' };
             }
 
-            const totalAmount = ordersToPay.reduce((sum, o) => sum + o.totalAmount, 0);
-
-            // 3. Tạo Hóa đơn (Invoice)
-            const invoice = await tx.invoice.create({
-                data: {
-                    subTotal: totalAmount,
-                    finalAmount: totalAmount,
-                    tableId: String(id),
-                    chatSessionId: activeSession.id,
-                    isPaid: true,
-                    // Kết nối tất cả các đơn hàng vào hóa đơn này
-                    orders: {
-                        connect: ordersToPay.map(o => ({ id: o.id }))
-                    }
-                }
-            });
-
-            // 4. Cập nhật trạng thái các đơn hàng thành COMPLETED
-            await tx.order.updateMany({
-                where: { id: { in: ordersToPay.map(o => o.id) } },
-                data: { status: 'COMPLETED' }
-            });
-
-            // 5. Đóng phiên chat hiện tại
-            await tx.chatSession.update({
-                where: { id: activeSession.id },
-                data: { isActive: false, endTime: new Date() }
-            });
-
-            // 6. Chuyển trạng thái bàn về Sẵn sàng
-            await tx.table.update({
-                where: { id: String(id) },
-                data: { status: 'AVAILABLE' }
-            });
-
-            return { message: 'Thanh toán thành công', invoiceId: invoice.id, total: totalAmount };
+            return { 
+                message: isFullyPaid ? 'Bàn đã được đóng' : 'Thanh toán một phần thành công', 
+                invoiceId, 
+                total: totalAmount,
+                isFullyPaid
+            };
         });
 
         res.status(200).json(result);
+
+        const { io } = require('../index');
+        if (io) {
+            if (result.isFullyPaid) {
+                io.to(`table_${id}`).emit('SESSION_ENDED');
+            }
+            io.emit('staff_notification', { type: 'TABLE_UPDATED' });
+        }
     } catch (error: any) {
         console.error('Checkout Error:', error);
         res.status(500).json({ error: error.message || 'Lỗi khi thực hiện thanh toán' });

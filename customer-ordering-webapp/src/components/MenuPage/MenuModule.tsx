@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { ChefHat, ShoppingCart, Search, Plus, Minus, X, CheckCircle2, ChevronRight, Hash, ClipboardList } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import api from '@/services/axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatWidget from '../Chat/ChatWidget';
-
+import { useRestaurantData } from '@/hooks/useRestaurantData';
+import { BellRing, Clock, ChefHat, ShoppingCart, Search, Plus, Minus, X, CheckCircle2, ChevronRight, Hash, ClipboardList } from 'lucide-react';
 interface MenuItem {
     id: string;
     name: string;
@@ -39,14 +39,20 @@ interface OrderHistory {
 
 export default function MenuModule({ qrCode }: { qrCode?: string }) {
     const router = useRouter();
-    const [tableName, setTableName] = useState('');
-    const [tableId, setTableId] = useState('');
-    const [chatSessionId, setChatSessionId] = useState('');
+    const {
+        tableName,
+        tableId,
+        chatSessionId,
+        orderHistory,
+        initialMessages,
+        statusNotification,
+        socket,
+        refreshHistory
+    } = useRestaurantData(qrCode);
+
     const [categories, setCategories] = useState<Category[]>([]);
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-    const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
-    const [initialMessages, setInitialMessages] = useState([]);
-    
+
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -55,8 +61,21 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
 
+    const getStatusInfo = (status: string) => {
+        switch (status) {
+            case 'WAITING_APPROVAL': return { label: 'Chờ duyệt', color: 'bg-red-50 text-red-500' };
+            case 'PENDING': return { label: 'Chờ chế biến', color: 'bg-orange-50 text-orange-500' };
+            case 'COOKING': return { label: 'Đang chế biến', color: 'bg-amber-50 text-amber-500' };
+            case 'READY': return { label: 'Sẵn sàng trả món', color: 'bg-green-50 text-green-500' };
+            case 'SERVED': return { label: 'Đã phục vụ', color: 'bg-blue-50 text-blue-500' };
+            case 'COMPLETED': return { label: 'Đã hoàn thành', color: 'bg-gray-100 text-gray-500' };
+            case 'CANCELLED': return { label: 'Đã hủy', color: 'bg-gray-100 text-red-400' };
+            default: return { label: status, color: 'bg-gray-50 text-gray-400' };
+        }
+    };
+
     useEffect(() => {
-        // 1. Load cart from localStorage
+        // Load cart from localStorage
         const savedCart = localStorage.getItem('restaurant_customer_cart');
         if (savedCart) {
             try {
@@ -66,49 +85,8 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
             }
         }
 
-        const storedName = localStorage.getItem('restaurant_table_name');
-        const storedId = localStorage.getItem('restaurant_table_id');
-        const storedSessionId = localStorage.getItem('restaurant_chat_session_id');
-        
-        if (storedName) setTableName(storedName);
-        if (storedId) setTableId(storedId);
-        if (storedSessionId) setChatSessionId(storedSessionId);
-
-        const fetchData = async () => {
+        const fetchMenu = async () => {
             try {
-                // 2. Identify table & session if QR code is present
-                if (qrCode) {
-                    try {
-                        const res = await api.get(`/tables/qrcode/${qrCode}`);
-                        const { table, chatSession, orders } = res.data.data;
-                        
-                        if (table) {
-                            setTableId(table.id);
-                            setTableName(table.name);
-                            localStorage.setItem('restaurant_table_id', table.id);
-                            localStorage.setItem('restaurant_table_name', table.name);
-                        }
-
-                        if (chatSession) {
-                            setChatSessionId(chatSession.id);
-                            setInitialMessages(chatSession.messages || []);
-                            localStorage.setItem('restaurant_chat_session_id', chatSession.id);
-                        }
-
-                        if (orders) {
-                            setOrderHistory(orders);
-                        }
-                    } catch (err) {
-                        console.error('Failed to identify table from QR');
-                        localStorage.removeItem('restaurant_table_id');
-                        localStorage.removeItem('restaurant_table_name');
-                        localStorage.removeItem('restaurant_chat_session_id');
-                        setTableId('');
-                        setTableName('');
-                    }
-                }
-
-                // 3. Fetch categories and items
                 const [catRes, itemRes] = await Promise.all([
                     api.get('/categories?limit=50'),
                     api.get('/menu-items?limit=100')
@@ -116,11 +94,11 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                 setCategories(catRes.data.data || []);
                 setMenuItems(itemRes.data.data || []);
             } catch (error: any) {
-                console.error('Fetch error:', error);
+                console.error('Fetch menu error:', error);
             }
         };
-        fetchData();
-    }, [qrCode]);
+        fetchMenu();
+    }, []);
 
     // Save cart to localStorage whenever it changes
     useEffect(() => {
@@ -182,12 +160,9 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
             setIsCartOpen(false);
             setOrderSuccess(true);
             setTimeout(() => setOrderSuccess(false), 5000);
-            
+
             // Refresh history
-            if (qrCode) {
-               const res = await api.get(`/tables/qrcode/${qrCode}`);
-               setOrderHistory(res.data.data.orders);
-            }
+            refreshHistory();
         } catch (error) {
             alert('Lỗi khi gửi đơn hàng. Vui lòng thử lại.');
         } finally {
@@ -311,10 +286,10 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
 
             {/* Chat Widget */}
             {tableId && chatSessionId && (
-                <ChatWidget 
-                    tableId={tableId} 
-                    tableName={tableName} 
-                    chatSessionId={chatSessionId} 
+                <ChatWidget
+                    tableId={tableId}
+                    tableName={tableName}
+                    chatSessionId={chatSessionId}
                     initialMessages={initialMessages}
                 />
             )}
@@ -337,6 +312,28 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                 )}
             </AnimatePresence>
 
+            {/* Status Notifications (Toasts) */}
+            <AnimatePresence>
+                {statusNotification && (
+                    <motion.div
+                        initial={{ y: -100, opacity: 0 }}
+                        animate={{ y: 20, opacity: 1 }}
+                        exit={{ y: -100, opacity: 0 }}
+                        className="fixed top-0 left-6 right-6 z-[200] bg-gray-900/95 backdrop-blur-md text-white p-4 rounded-2xl flex items-center gap-4 shadow-2xl border border-white/10"
+                    >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg
+                            ${statusNotification.type === 'READY' ? 'bg-green-500' : 'bg-amber-500'}
+                        `}>
+                            {statusNotification.type === 'READY' ? <BellRing className="w-5 h-5 animate-bounce" /> : <Clock className="w-5 h-5 animate-spin-slow" />}
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-xs font-black uppercase tracking-widest opacity-50 mb-0.5">Thông báo đơn hàng</p>
+                            <p className="text-sm font-bold leading-tight">{statusNotification.message}</p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Order History Overlay */}
             <AnimatePresence>
                 {isHistoryOpen && (
@@ -354,28 +351,49 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                             exit={{ y: '100%' }}
                             className="fixed bottom-0 inset-x-0 bg-white rounded-t-[3rem] z-[80] flex flex-col max-h-[85vh] shadow-2xl overflow-hidden"
                         >
-                            <div className="p-8 border-b border-gray-100 flex items-center justify-between">
-                                <h2 className="text-2xl font-black text-gray-800">Món đã gọi</h2>
-                                <button onClick={() => setIsHistoryOpen(false)} className="p-3 bg-gray-50 rounded-full"><X /></button>
+                            <div className="p-8 border-b border-gray-100 flex items-center justify-between shrink-0 bg-gray-50/50">
+                                <div>
+                                    <h2 className="text-2xl font-black text-gray-800">Lịch sử gọi món</h2>
+                                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1">BÀN {tableName}</p>
+                                </div>
+                                <button onClick={() => setIsHistoryOpen(false)} className="p-3 bg-white rounded-full shadow-sm text-gray-400"><X className="w-6 h-6" /></button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/30">
                                 {orderHistory.length === 0 ? (
-                                    <div className="text-center py-20 text-gray-300">Chưa có món nào được đặt.</div>
-                                ) : (
-                                    orderHistory.map((order) => (
-                                        <div key={order.id} className="bg-gray-50 p-4 rounded-2xl space-y-3">
-                                            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-                                                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">{order.status}</span>
-                                                <span className="font-bold text-sm">{order.totalAmount.toLocaleString()}đ</span>
-                                            </div>
-                                            {order.items.map((it, idx) => (
-                                                <div key={idx} className="flex justify-between text-sm">
-                                                    <span className="text-gray-600">{it.menuItem.name} x {it.quantity}</span>
-                                                    <span className="font-medium">{(it.quantity * it.menuItem.price).toLocaleString()}đ</span>
-                                                </div>
-                                            ))}
+                                    <div className="text-center py-20 flex flex-col items-center gap-4">
+                                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+                                            <ClipboardList className="w-10 h-10 text-gray-300" />
                                         </div>
-                                    ))
+                                        <p className="text-gray-400 font-bold">Bạn chưa đặt món nào</p>
+                                    </div>
+                                ) : (
+                                    orderHistory.map((order) => {
+                                        const statusInfo = getStatusInfo(order.status);
+                                        return (
+                                            <div key={order.id} className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 space-y-4">
+                                                <div className="flex justify-between items-center pb-3 border-b border-gray-50">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] font-black text-gray-300 uppercase">#{order.id.slice(-4)}</span>
+                                                        <span className={`px-3 py-1 ${statusInfo.color} text-[9px] font-black uppercase rounded-lg shadow-sm`}>
+                                                            {statusInfo.label}
+                                                        </span>
+                                                    </div>
+                                                    <span className="font-black text-gray-900">{order.totalAmount.toLocaleString()}đ</span>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {order.items.map((it, idx) => (
+                                                        <div key={idx} className="flex justify-between text-xs items-center">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="w-5 h-5 bg-gray-50 rounded flex items-center justify-center font-bold text-gray-400">{it.quantity}</span>
+                                                                <span className="text-gray-600 font-medium">{it.menuItem.name}</span>
+                                                            </div>
+                                                            <span className="font-bold text-gray-400">{(it.quantity * it.menuItem.price).toLocaleString()}đ</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
                                 )}
                             </div>
                         </motion.div>
@@ -419,21 +437,21 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                                 </div>
                                 <button onClick={() => setIsCartOpen(false)} className="p-3 bg-gray-50 rounded-full text-gray-400"><X className="w-6 h-6" /></button>
                             </div>
-                            
+
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                 {cart.map(item => (
                                     <div key={item.id} className="flex gap-4">
                                         <div className="flex-1 shrink-0">
                                             <h4 className="font-bold text-gray-800 leading-tight">{item.name}</h4>
-                                            
+
                                             {/* Note Input */}
                                             <div className="mt-2 group">
                                                 <div className="flex items-center gap-2 mb-1.5 px-2">
                                                     <div className="w-1 h-3 bg-amber-400 rounded-full" />
                                                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Ghi chú cho bếp</span>
                                                 </div>
-                                                <input 
-                                                    type="text" 
+                                                <input
+                                                    type="text"
                                                     placeholder="Ví dụ: Không cay, ít đường..."
                                                     value={item.notes}
                                                     onChange={(e) => updateNotes(item.id, e.target.value)}
@@ -442,9 +460,9 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                                             </div>
 
                                             <div className="flex items-center gap-4 mt-3">
-                                                <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-7 rounded-full border border-gray-100 bg-white shadow-sm flex items-center justify-center active:scale-90 transition-transform"><Minus size={14} className="text-gray-400"/></button>
+                                                <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-7 rounded-full border border-gray-100 bg-white shadow-sm flex items-center justify-center active:scale-90 transition-transform"><Minus size={14} className="text-gray-400" /></button>
                                                 <span className="font-bold text-sm text-gray-700">{item.quantity}</span>
-                                                <button onClick={() => updateQuantity(item.id, 1)} className="w-7 h-7 rounded-full border border-gray-100 bg-white shadow-sm flex items-center justify-center text-amber-500 active:scale-95 transition-transform"><Plus size={14}/></button>
+                                                <button onClick={() => updateQuantity(item.id, 1)} className="w-7 h-7 rounded-full border border-gray-100 bg-white shadow-sm flex items-center justify-center text-amber-500 active:scale-95 transition-transform"><Plus size={14} /></button>
                                             </div>
                                         </div>
                                         <div className="flex flex-col items-end justify-between py-1">

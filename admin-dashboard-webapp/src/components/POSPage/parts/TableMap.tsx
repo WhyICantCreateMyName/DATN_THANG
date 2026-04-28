@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, RotateCcw, User, Flame } from 'lucide-react';
+import { LayoutGrid, RotateCcw, User, Flame, MessageCircle } from 'lucide-react';
 import { Table } from '@/services/table.service';
 
 interface TableMapProps {
@@ -11,6 +11,7 @@ interface TableMapProps {
     onSelectTable: (id: string) => void;
     onRefresh: () => void;
     tableHasNewOrder: (id: string) => boolean;
+    unreadTables?: string[];
     isLoading: boolean;
 }
 
@@ -20,10 +21,11 @@ export default function TableMap({
     onSelectTable,
     onRefresh,
     tableHasNewOrder,
+    unreadTables = [],
     isLoading
 }: TableMapProps) {
     return (
-        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col">
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col h-full">
             <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                     <div className="p-3 bg-gray-900 rounded-2xl text-white">
@@ -44,6 +46,7 @@ export default function TableMap({
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 overflow-y-auto pr-2 custom-scrollbar">
                     {tables?.map((table) => {
                         const hasNew = tableHasNewOrder(table.id);
+                        const hasUnread = unreadTables.includes(table.id);
                         return (
                             <motion.button
                                 key={table.id}
@@ -64,6 +67,11 @@ export default function TableMap({
                                 <span className="text-xs font-black uppercase opacity-60">BÀN</span>
                                 <span className="text-3xl font-black">{table.name}</span>
                                 {hasNew && <Flame className="w-4 h-4 text-red-500 absolute top-2 left-2" />}
+                                {hasUnread && (
+                                    <div className="absolute top-2 right-2 flex h-4 w-4">
+                                        <MessageCircle className="w-4 h-4 text-blue-500 animate-bounce" />
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-1 mt-1">
                                     <User className="w-3 h-3" />
                                     <span className="text-[10px] font-bold">{table.capacity}</span>

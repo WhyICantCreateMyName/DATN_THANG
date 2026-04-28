@@ -30,7 +30,7 @@ async function main() {
     await prisma.user.createMany({
         data: [
             { username: 'admin', password: hashedPassword, fullName: 'Quản trị viên', role: Role.ADMIN },
-            { username: 'waiter1', password: hashedPassword, fullName: 'Nguyễn Văn Phục Vụ', role: Role.WAITER },
+            { username: 'waiter1', password: hashedPassword, fullName: 'Nguyễn Văn Phục Vụ', role: Role.CASHIER },
             { username: 'kitchen1', password: hashedPassword, fullName: 'Trần Thị Bếp', role: Role.KITCHEN },
             { username: 'cashier1', password: hashedPassword, fullName: 'Lê Thu Ngân', role: Role.CASHIER },
         ]

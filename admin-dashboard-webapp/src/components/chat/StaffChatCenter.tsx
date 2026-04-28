@@ -58,6 +58,7 @@ export default function StaffChatCenter() {
         // Socket logic
         const newSocket = io(constants.url.api.baseUrl);
         setSocket(newSocket);
+        newSocket.emit('join_staff_room');
 
         newSocket.on('receive_message', (message: ChatMessage) => {
             setSessions(prev => prev.map(s => {
@@ -72,11 +73,14 @@ export default function StaffChatCenter() {
             }));
         });
 
-        // Lắng nghe thông báo gọi nhân viên
+        // Lắng nghe thông báo hệ thống (Dùng cho thông báo âm thanh toàn cục)
         newSocket.on('staff_notification', (data: any) => {
-            if (data.type === 'CALL_STAFF') {
+            if (data.type === 'CALL_STAFF' || data.type === 'NEW_MESSAGE') {
                 audioRef.current?.play().catch(() => {});
-                alert(`🚨 CẢNH BÁO: Bàn ${data.tableName} đang gọi nhân viên!`);
+                
+                if (data.type === 'CALL_STAFF') {
+                    alert(`🚨 CẢNH BÁO: Bàn ${data.tableName} đang gọi nhân viên!`);
+                }
             }
         });
 
@@ -165,9 +169,21 @@ export default function StaffChatCenter() {
                         <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6">
                             {selectedSession.messages.map((msg, idx) => {
                                 const isStaff = msg.senderType === 'STAFF';
+                                const isSystem = msg.senderId === 'SYSTEM';
+
+                                if (isSystem) {
+                                    return (
+                                        <div key={msg.id || idx} className="flex justify-center my-2">
+                                            <span className="text-[10px] bg-gray-200 text-gray-500 px-4 py-1.5 rounded-full font-bold uppercase tracking-widest shadow-sm">
+                                                {msg.content}
+                                            </span>
+                                        </div>
+                                    );
+                                }
+
                                 return (
                                     <div key={msg.id || idx} className={`flex ${isStaff ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[70%] text-sm px-6 py-4 rounded-[2rem] font-medium shadow-sm ${isStaff ? 'bg-gray-900 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'}`}>
+                                        <div className={`max-w-[70%] text-sm px-6 py-4 rounded-[2rem] font-medium shadow-sm ${isStaff ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'}`}>
                                             {msg.content}
                                             <p className={`text-[10px] mt-2 opacity-40 ${isStaff ? 'text-right' : 'text-left'}`}>
                                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

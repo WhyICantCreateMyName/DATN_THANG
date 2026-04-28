@@ -26,8 +26,8 @@ export const tableService = {
     deleteTable: async (id: string): Promise<void> => {
         await api.delete(`/tables/${id}`);
     },
-    checkoutTable: async (id: string): Promise<void> => {
-        await api.post(`/tables/${id}/checkout`);
+    checkoutTable: async (id: string, orderIds?: string[]): Promise<void> => {
+        await api.post(`/tables/${id}/checkout`, { orderIds });
     },
     mergeTables: async (sourceTableId: string, targetTableId: string): Promise<any> => {
         const res = await api.post('/tables/merge', { sourceTableId, targetTableId });

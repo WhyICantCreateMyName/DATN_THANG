@@ -1,13 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useTable } from '@/hooks/useTable';
-import { useOrders } from '@/hooks/useOrders';
-import { useSocket } from '@/hooks/useSocket';
-import { orderService } from '@/services/order.service';
-import { tableService } from '@/services/table.service';
-
-// Import các sub-components đã tách
+import React, { useEffect } from 'react';
+import { usePOS } from '@/hooks/usePOS';
 import TableMap from './parts/TableMap';
 import OrderPanel from './parts/OrderPanel';
 import CheckoutPanel from './parts/CheckoutPanel';
@@ -16,116 +10,34 @@ import ChatPanel from './parts/ChatPanel';
 import { LayoutGrid } from 'lucide-react';
 
 export default function POSModule() {
-    const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-    const socket = useSocket();
-
-    // 1. Lấy dữ liệu Sơ đồ bàn
     const {
-        tables,
-        isLoading: isTablesLoading,
-        mutateTables,
-        checkoutTable
-    } = useTable();
+        selectedTableId, setSelectedTableId,
+        unreadTables, setUnreadTables,
+        selectedOrderIds, toggleOrderSelection,
+        tables, isTablesLoading,
+        activeOrders, isOrdersLoading,
+        waitingOrders,
+        selectedTable,
+        audioRef, notificationAudioRef,
+        socket,
+        handleApprove, handleCancel, handleUpdateStatus, handleCheckout, handleMoveOrder, handleMergeTables,
+        calculateTotal,
+        mutateTables, mutateWaitingOrders
+    } = usePOS();
 
-    // 2. Lấy đơn hàng của bàn đang chọn (Lưu ý: onlyActive=true để sửa lỗi hiện đơn cũ)
-    const {
-        orders: activeOrders,
-        isLoading: isOrdersLoading,
-        approveOrder,
-        cancelOrder,
-        mutate: mutateActiveOrders
-    } = useOrders(selectedTableId ? { tableId: selectedTableId, onlyActive: true } : undefined);
-
-    // 3. Lấy tất cả đơn chờ duyệt để báo hiệu trên Map
-    const { orders: waitingOrders, mutate: mutateWaitingOrders } = useOrders({ status: 'WAITING_APPROVAL' });
-
-    // Xử lý hiệu ứng âm thanh lặp lại khi có đơn chờ duyệt
+    // Khi chọn bàn, xóa thông báo tin nhắn chưa đọc của bàn đó
     useEffect(() => {
-        if (!audioRef.current) return;
-
-        if (waitingOrders.length > 0) {
-            audioRef.current.loop = true;
-            audioRef.current.play().catch(() => {
-                console.log('🔇 Trình duyệt chặn tự động phát âm thanh. Vui lòng click vào trang ít nhất 1 lần.');
-            });
-        } else {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            audioRef.current.loop = false;
+        if (selectedTableId) {
+            setUnreadTables(prev => prev.filter(id => id !== selectedTableId));
         }
-    }, [waitingOrders]);
+    }, [selectedTableId, setUnreadTables]);
 
-    // Xử lý Socket Real-time
-    useEffect(() => {
-        if (socket) {
-            socket.on('staff_notification', (data: any) => {
-                if (data.type === 'NEW_ORDER' || data.type === 'TABLE_UPDATED' || data.type === 'CALL_STAFF') {
-                    mutateTables();
-                    mutateWaitingOrders();
-                    if (selectedTableId) mutateActiveOrders();
-                }
-            });
-        }
-    }, [socket, selectedTableId, mutateTables, mutateWaitingOrders, mutateActiveOrders]);
-
-    const selectedTable = tables?.find(t => t.id === selectedTableId);
-
-    // --- CÁC HÀNH ĐỘNG NGHIỆP VỤ ---
-
-    const handleApprove = async (id: string) => {
-        await approveOrder(id);
-        mutateTables();
-        mutateWaitingOrders();
-        mutateActiveOrders();
-    };
-
-    const handleCancel = async (id: string) => {
-        await cancelOrder(id);
-        mutateActiveOrders();
-        mutateWaitingOrders();
-    };
-
-    const handleCheckout = async () => {
-        if (!selectedTableId || !selectedTable) return;
-        try {
-            await checkoutTable(selectedTableId);
-            setSelectedTableId(null);
-            mutateWaitingOrders();
-        } catch (err: any) {
-            alert(err.message || 'Lỗi thanh toán');
-        }
-    };
-
-    const handleMoveOrder = async (orderId: string, targetTableId: string) => {
-        try {
-            await orderService.moveOrder(orderId, targetTableId);
-            mutateTables();
-            mutateActiveOrders();
-            mutateWaitingOrders();
-        } catch (err: any) {
-            alert(err.message || 'Lỗi khi chuyển đơn');
-        }
-    };
-
-    const handleMergeTables = async (sourceId: string, targetId: string) => {
-        try {
-            await tableService.mergeTables(sourceId, targetId);
-            mutateTables();
-            if (sourceId === selectedTableId) setSelectedTableId(targetId);
-            mutateActiveOrders();
-            mutateWaitingOrders();
-        } catch (err: any) {
-            alert(err.message || 'Lỗi khi gộp bàn');
-        }
-    };
-
-    const calculateTotal = () => activeOrders.reduce((sum, o) => sum + o.totalAmount, 0);
     const hasNewOrder = (id: string) => waitingOrders.some(o => o.tableId === id);
 
     return (
         <div className="flex h-[calc(100vh-120px)] gap-6 overflow-hidden">
             <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto" />
+            <audio ref={notificationAudioRef} src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto" />
 
             {/* PHẦN 1: SƠ ĐỒ BÀN (30% chiều rộng) */}
             <div className="w-[30%] min-w-[320px]">
@@ -135,6 +47,7 @@ export default function POSModule() {
                     onSelectTable={setSelectedTableId}
                     onRefresh={() => { mutateTables(); mutateWaitingOrders(); }}
                     tableHasNewOrder={hasNewOrder}
+                    unreadTables={unreadTables}
                     isLoading={isTablesLoading}
                 />
             </div>
@@ -164,12 +77,16 @@ export default function POSModule() {
                                 isLoading={isOrdersLoading}
                                 onApprove={handleApprove}
                                 onCancel={handleCancel}
+                                onUpdateStatus={handleUpdateStatus}
+                                selectedOrderIds={selectedOrderIds}
+                                onToggleSelect={toggleOrderSelection}
                             />
 
                             <CheckoutPanel
                                 total={calculateTotal()}
-                                canCheckout={activeOrders.length > 0}
+                                canCheckout={selectedTable.status === 'OCCUPIED'}
                                 onCheckout={handleCheckout}
+                                isPartial={selectedOrderIds.length > 0}
                             />
                         </div>
 

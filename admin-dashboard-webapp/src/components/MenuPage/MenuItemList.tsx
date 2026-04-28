@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, UtensilsCrossed, Check, X, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, UtensilsCrossed, Check, X, Image as ImageIcon, FlaskConical } from 'lucide-react';
 import { menuService, Category, MenuItem } from '@/services/menu.service';
+import RecipeModal from './parts/RecipeModal';
 
 interface MenuItemUI extends MenuItem {
     isEdit?: boolean;
@@ -32,6 +33,8 @@ export default function MenuItemList({
     const [isSaving, setIsSaving] = useState(false);
     const [isCreatingItem, setIsCreatingItem] = useState(false);
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
+    const [selectedItemForRecipe, setSelectedItemForRecipe] = useState<MenuItem | null>(null);
+    const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
 
     // Image selection state
     const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: File }>({});
@@ -262,6 +265,13 @@ export default function MenuItemList({
                                             <div className="flex justify-between items-start">
                                                 <h3 className="font-bold text-gray-800 line-clamp-1">{item.name}</h3>
                                                 <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => { setSelectedItemForRecipe(item); setIsRecipeModalOpen(true); }}
+                                                        className="p-1 hover:bg-purple-50 rounded text-gray-400 hover:text-purple-600"
+                                                        title="Định mức nguyên liệu"
+                                                    >
+                                                        <FlaskConical className="w-3.5 h-3.5" />
+                                                    </button>
                                                     <button onClick={() => handleEditItem(item.id)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-500"><Edit2 className="w-3.5 h-3.5" /></button>
                                                     <button onClick={() => handleDeleteItem(item.id, item.name)} className="p-1 hover:bg-red-50 rounded text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
                                                 </div>
@@ -302,6 +312,12 @@ export default function MenuItemList({
                     <span className="text-sm font-medium text-gray-500">Trang {itemPage} / {metaItems.totalPages}</span>
                     <button onClick={() => setItemPage(p => Math.min(metaItems.totalPages, p + 1))} disabled={itemPage === metaItems.totalPages} className="px-3 py-1.5 text-sm bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors">Trang sau</button>
                 </div>
+            )}
+            {isRecipeModalOpen && selectedItemForRecipe && (
+                <RecipeModal
+                    menuItem={selectedItemForRecipe}
+                    onClose={() => { setIsRecipeModalOpen(false); setSelectedItemForRecipe(null); }}
+                />
             )}
         </div>
     );

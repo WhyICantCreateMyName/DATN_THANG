@@ -7,22 +7,22 @@ Quét QR & Khởi tạo Phiên (Session Initialization): Khi khách quét mã QR
 
 Tự đặt món (Self-Ordering): Khách hàng duyệt Thực đơn điện tử (E-Menu), chọn món và thêm ghi chú (VD: "ít cay"). Khi xác nhận, Đơn hàng (Order) được gửi lên hệ thống với trạng thái WAITING_APPROVAL (Chờ duyệt). Trạng thái này là chốt chặn bảo mật, giúp ngăn chặn việc khách ấn nhầm hoặc spam gọi món ảo.
 
-Giao tiếp Thời gian thực (Real-time Live Chat): Khách hàng sử dụng cửa sổ chat tích hợp để yêu cầu hỗ trợ (xin thêm đá, giấy ăn, giục lên món...). Hệ thống định tuyến tin nhắn chính xác đến màn hình điều khiển của nhân viên phụ trách thông qua kết nối Socket.io.
+Giao tiếp Thời gian thực (Real-time Live Chat): Khách hàng sử dụng cửa sổ chat tích hợp để yêu cầu hỗ trợ (xin thêm đá, giấy ăn, giục lên món...). Hệ thống định tuyến tin nhắn chính xác đến màn hình điều khiển của nhân viên POS/Thu ngân thông qua kết nối Socket.io.
 
 Theo dõi Trạng thái Đơn hàng: Khách hàng theo dõi trực tiếp tiến độ món ăn trên điện thoại (Đã duyệt -> Đang nấu -> Sẵn sàng).
 
 2. Phân hệ POS & Thu Ngân (Staff & Cashier Dashboard)
 **Đóng vai trò là trung tâm điều khiển tại quầy, tích hợp toàn bộ nghiệp vụ phục vụ, kiểm duyệt và thanh toán.
 
-Quản lý Bàn & Đón khách: Trực quan hóa sơ đồ bàn theo thời gian thực và nhận cảnh báo khách đặt bàn online vượt ngưỡng để gọi điện tư vấn. Khi khách đến, nhân viên check-in chuyển trạng thái bàn sang OCCUPIED (tự động kích hoạt sẵn ChatSession), đồng thời hỗ trợ hủy lịch giải phóng bàn nếu khách đến trễ (No-show).
+Quản lý Bàn & Đón khách: Trực quan hóa sơ đồ bàn theo thời gian thực và nhận cảnh báo khách đặt bàn online vượt ngưỡng để gọi điện tư vấn. Khi khách đến, nhân viên POS/Thu ngân check-in chuyển trạng thái bàn sang OCCUPIED (tự động kích hoạt sẵn ChatSession), đồng thời hỗ trợ hủy lịch giải phóng bàn nếu khách đến trễ (No-show).
 
-Kiểm duyệt Đơn hàng (Order Approval): Khi có Order từ mã QR, hệ thống "Ping" cảnh báo. Nhân viên xác nhận khách tại bàn và bấm "Duyệt", chuyển đơn hàng từ WAITING_APPROVAL sang PENDING để đẩy lệnh in xuống Bếp.
+Kiểm duyệt Đơn hàng (Order Approval): Khi có Order từ mã QR, hệ thống "Ping" cảnh báo. Nhân viên POS/Thu ngân xác nhận khách tại bàn và bấm "Duyệt", chuyển đơn hàng từ WAITING_APPROVAL sang COOKING để đẩy lệnh trực tiếp xuống Bếp.
 
-Order Trực tiếp (Direct Take-Order): Đối với khách không dùng điện thoại, nhân viên sử dụng POS để gọi món thay khách. Đơn hàng tạo từ kênh này đi thẳng vào trạng thái PENDING.
+Order Trực tiếp (Direct Take-Order): Đối với khách không dùng điện thoại, nhân viên POS/Thu ngân sử dụng POS để gọi món thay khách. Đơn hàng tạo từ kênh này đi thẳng vào trạng thái COOKING.
 
 Tổng đài Hỗ trợ (Chat Hub): Hiển thị màn hình Live Chat tổng hợp, nhận tin nhắn từ các bàn và phản hồi trực tiếp cho khách hàng (VD: "Dạ vâng, em mang ra ngay ạ").
 
-Đồng bộ Phục vụ (Kitchen Sync): Nhận thông báo tự động từ Bếp khi món ăn READY, chỉ đạo bồi bàn mang thức ăn ra và đổi trạng thái thành SERVED.
+Đồng bộ Phục vụ (Kitchen Sync): Nhận thông báo tự động từ Bếp khi món ăn READY để nhân viên POS/Thu ngân hoặc nhân viên điều phối mang món ra và đổi trạng thái thành SERVED.
 
 Thanh toán & Reset Phiên (Checkout & Session Reset - Nghiệp vụ cốt lõi):
 

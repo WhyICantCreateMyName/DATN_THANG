@@ -9,31 +9,26 @@ echo    RESTAURANT MANAGEMENT SYSTEM - QUICK RUN
 echo ======================================================
 echo.
 echo  [1] Run EVERYTHING (Start Docker Services + 3 Apps)
-echo  [2] Run APPS ONLY (Use if DB/MinIO is already running)
+echo  [2] Run APPS + Local MinIO (No Docker)
 echo  [3] Stop Docker Services
-echo  [4] Start MinIO Local (Use if NOT using Docker)
-echo  [5] Exit
+echo  [4] Exit
 echo.
 echo ======================================================
-set /p choice="Enter your choice (1-5): "
+set /p choice="Enter your choice (1-4): "
 
 if "%choice%"=="1" goto RUN_ALL
-if "%choice%"=="2" goto RUN_APPS
+if "%choice%"=="2" goto RUN_APPS_LOCAL
 if "%choice%"=="3" goto STOP_DOCKER
-if "%choice%"=="4" goto START_MINIO_LOCAL
-if "%choice%"=="5" goto EXIT
+if "%choice%"=="4" goto EXIT
 goto MENU
 
-:START_MINIO_LOCAL
+:RUN_APPS_LOCAL
 echo.
-echo Starting MinIO Local...
+echo [1/2] Starting MinIO in background...
 if not exist "minio_storage" mkdir "minio_storage"
-set MINIO_ROOT_USER=admin
-set MINIO_ROOT_PASSWORD=12345678
-start "MinIO Server" cmd /c "minio.exe server minio_storage --console-address :9001"
-echo [OK] MinIO is starting in a new window.
-timeout /t 3
-goto MENU
+powershell -WindowStyle Hidden -Command "Start-Process cmd -ArgumentList '/c set MINIO_ROOT_USER=admin && set MINIO_ROOT_PASSWORD=12345678 && minio.exe server minio_storage --console-address :9001' -WindowStyle Hidden"
+timeout /t 2
+goto RUN_APPS
 
 :RUN_ALL
 echo.

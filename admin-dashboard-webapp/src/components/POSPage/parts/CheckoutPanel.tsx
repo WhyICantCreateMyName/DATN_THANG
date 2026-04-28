@@ -7,23 +7,31 @@ interface CheckoutPanelProps {
     total: number;
     canCheckout: boolean;
     onCheckout: () => void;
+    isPartial?: boolean;
 }
 
-export default function CheckoutPanel({ total, canCheckout, onCheckout }: CheckoutPanelProps) {
+export default function CheckoutPanel({ total, canCheckout, onCheckout, isPartial }: CheckoutPanelProps) {
     return (
         <div className="p-8 bg-gray-50 border-t border-gray-100">
             <div className="flex justify-between items-center mb-6">
-                <span className="font-black text-gray-400 uppercase tracking-widest text-lg">TỔNG CỘNG</span>
+                <div>
+                    <span className="font-black text-gray-400 uppercase tracking-widest text-lg block">TỔNG CỘNG</span>
+                    {isPartial && (
+                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-wider bg-orange-50 px-2 py-0.5 rounded">Đang tách đơn</span>
+                    )}
+                </div>
                 <span className="text-4xl font-black text-gray-900">{total.toLocaleString()}đ</span>
             </div>
             <div className="flex gap-4">
                 <button 
                     disabled={!canCheckout}
                     onClick={onCheckout}
-                    className="flex-1 py-5 bg-orange-500 text-white rounded-[1.5rem] font-black text-lg flex items-center justify-center gap-3 hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 disabled:opacity-50 disabled:grayscale active:scale-[0.98]"
+                    className={`flex-1 py-5 text-white rounded-[1.5rem] font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl disabled:opacity-50 disabled:grayscale active:scale-[0.98]
+                        ${isPartial ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20'}
+                    `}
                 >
                     <Receipt className="w-6 h-6" />
-                    TÍNH TIỀN & DỌN BÀN
+                    {total === 0 ? 'DỌN BÀN & KẾT THÚC' : isPartial ? 'THANH TOÁN ĐƠN ĐÃ CHỌN' : 'TÍNH TIỀN & DỌN BÀN'}
                 </button>
             </div>
         </div>

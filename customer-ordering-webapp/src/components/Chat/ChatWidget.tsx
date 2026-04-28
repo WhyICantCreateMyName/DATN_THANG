@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, User, Bot, BellRing } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
-import constants from '@/constants';
+import { useCustomerChat } from '@/hooks/useCustomerChat';
 
 interface Message {
   id: string;
@@ -23,35 +22,15 @@ interface ChatWidgetProps {
 
 export default function ChatWidget({ tableId, tableName, chatSessionId, initialMessages = [] }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [guestId, setGuestId] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Persistent Guest ID
-    let id = localStorage.getItem('restaurant_guest_id');
-    if (!id) {
-      id = `guest_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('restaurant_guest_id', id);
-    }
-    setGuestId(id);
-
-    // Socket.io initialization
-    const newSocket = io(constants.url.api.baseUrl);
-    setSocket(newSocket);
-
-    newSocket.emit('join_table', tableId);
-
-    newSocket.on('receive_message', (message: Message) => {
-      setMessages((prev) => [...prev, message]);
-    });
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [tableId]);
+  const {
+    messages,
+    guestId,
+    sendMessage,
+    callStaff
+  } = useCustomerChat(tableId, chatSessionId, initialMessages);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -60,23 +39,13 @@ export default function ChatWidget({ tableId, tableName, chatSessionId, initialM
   }, [messages, isOpen]);
 
   const handleSendMessage = () => {
-    if (!inputValue.trim() || !socket || !chatSessionId) return;
-
-    const messageData = {
-      chatSessionId,
-      tableId,
-      content: inputValue,
-      senderType: 'CUSTOMER',
-      senderId: guestId
-    };
-
-    socket.emit('send_message', messageData);
+    if (!inputValue.trim()) return;
+    sendMessage(inputValue);
     setInputValue('');
   };
 
   const handleCallStaff = () => {
-    if (!socket) return;
-    socket.emit('call_staff', { tableId, tableName });
+    callStaff(tableName);
     alert('Đã gửi yêu cầu gọi nhân viên! Vui lòng đợi trong giây lát.');
   };
 
@@ -108,11 +77,19 @@ export default function ChatWidget({ tableId, tableName, chatSessionId, initialM
 
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-              {messages.map((msg) => {
-                const isMe = msg.senderId === guestId;
-                const isSystem = msg.senderId === 'SYSTEM';
+              {messages
+                .filter((msg) => {
+                  const isMe = msg.senderId === guestId;
+                  const isSystem = msg.senderId === 'SYSTEM';
+                  const isStaff = msg.senderType === 'STAFF';
+                  // Chỉ hiện tin nhắn của mình, của hệ thống hoặc của nhân viên
+                  return isMe || isSystem || isStaff;
+                })
+                .map((msg) => {
+                  const isMe = msg.senderId === guestId;
+                  const isSystem = msg.senderId === 'SYSTEM';
 
-                if (isSystem) {
+                  if (isSystem) {
                   return (
                     <div key={msg.id} className="flex justify-center">
                       <span className="text-[10px] bg-gray-200 text-gray-500 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
@@ -134,7 +111,7 @@ export default function ChatWidget({ tableId, tableName, chatSessionId, initialM
 
             {/* Actions */}
             <div className="px-6 py-2 bg-white flex gap-2 overflow-x-auto no-scrollbar border-t border-gray-50">
-              <button 
+              <button
                 onClick={handleCallStaff}
                 className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full text-xs font-bold whitespace-nowrap active:scale-95 transition-all"
               >
@@ -154,7 +131,7 @@ export default function ChatWidget({ tableId, tableName, chatSessionId, initialM
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Nhắn tin cho quán..."
-                className="flex-1 px-4 py-3 bg-gray-50 rounded-xl text-sm outline-none focus:ring-1 focus:ring-amber-500/20"
+                className="flex-1 px-4 py-3 bg-gray-50 rounded-xl text-sm outline-none focus:ring-1 focus:ring-amber-500/20 text-gray-500"
               />
               <button
                 onClick={handleSendMessage}

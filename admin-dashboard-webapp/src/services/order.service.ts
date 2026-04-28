@@ -13,7 +13,7 @@ export interface OrderItem {
 
 export interface Order {
     id: string;
-    status: 'WAITING_APPROVAL' | 'PENDING' | 'COMPLETED' | 'CANCELLED';
+    status: 'WAITING_APPROVAL' | 'PENDING' | 'COOKING' | 'READY' | 'SERVED' | 'COMPLETED' | 'CANCELLED';
     totalAmount: number;
     items: OrderItem[];
     createdAt: string;

@@ -13,7 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Header />
 
                 {/* Content bên trong Dashboard */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6 md:p-8 ml-64 transition-all">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6 md:p-8 ml-64 transition-all text-gray-500">
                     {children}
                 </main>
             </div>

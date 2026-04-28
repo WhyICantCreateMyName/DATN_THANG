@@ -11,8 +11,8 @@ export const useTable = () => {
         { refreshInterval: 30000 }
     );
     
-    const checkoutTable = async (id: string) => {
-        await tableService.checkoutTable(id);
+    const checkoutTable = async (id: string, orderIds?: string[]) => {
+        await tableService.checkoutTable(id, orderIds);
         mutateTables(); // Refresh lại danh sách bàn
     };
 

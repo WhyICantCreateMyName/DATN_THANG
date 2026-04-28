@@ -16,6 +16,9 @@ import userRoutes from './controller/user.controller';
 import uploadRoutes from './controller/upload.controller';
 import orderRoutes from './controller/order.controller';
 import chatRoutes from './controller/chat.controller';
+import orderItemRoutes from './controller/orderItem.controller';
+import ingredientRoutes from './controller/ingredient.controller';
+import recipeRoutes from './controller/recipe.controller';
 import { initMinio } from './utils/minio';
 
 const app = express();
@@ -48,6 +51,9 @@ app.use('/', userRoutes);
 app.use('/', uploadRoutes);
 app.use('/', orderRoutes);
 app.use('/', chatRoutes);
+app.use('/', orderItemRoutes);
+app.use('/', ingredientRoutes);
+app.use('/', recipeRoutes);
 
 // ==========================================
 // SOCKET.IO LOGIC
@@ -64,6 +70,11 @@ io.on('connection', (socket) => {
         socket.leave(`table_${tableId}`);
     });
 
+    socket.on('join_staff_room', () => {
+        socket.join('staff_room');
+        console.log(`👨‍💼 Nhân viên ${socket.id} đã vào phòng điều hành`);
+    });
+
     socket.on('send_message', async (data: any) => {
         try {
             const newMessage = await prisma.message.create({
@@ -74,19 +85,53 @@ io.on('connection', (socket) => {
                     chatSessionId: data.chatSessionId
                 }
             });
-            io.to(`table_${data.tableId}`).emit('receive_message', newMessage);
+
+            if (data.senderType === 'CUSTOMER') {
+                // Khách nhắn: Chỉ gửi lại cho chính người gửi và toàn bộ nhân viên
+                socket.emit('receive_message', newMessage);
+                io.to('staff_room').emit('receive_message', newMessage);
+                
+                io.emit('staff_notification', {
+                    type: 'NEW_MESSAGE',
+                    tableId: data.tableId,
+                    message: `Bàn ${data.tableId} vừa gửi tin nhắn mới!`
+                });
+            } else {
+                // Nhân viên nhắn: Gửi cho cả bàn (Khách sẽ tự lọc ở FE dựa trên senderId nếu cần, 
+                // nhưng STAFF nhắn thì ai ở bàn đó cũng nên thấy)
+                io.to(`table_${data.tableId}`).emit('receive_message', newMessage);
+                // Đồng thời gửi cho các nhân viên khác để đồng bộ
+                io.to('staff_room').emit('receive_message', newMessage);
+            }
         } catch (error) {
             console.error('Lỗi gửi tin nhắn socket:', error);
         }
     });
 
-    socket.on('call_staff', (data: any) => {
-        io.emit('staff_notification', {
-            type: 'CALL_STAFF',
-            tableId: data.tableId,
-            tableName: data.tableName,
-            message: `Bàn ${data.tableName} đang gọi nhân viên!`
-        });
+    socket.on('call_staff', async (data: any) => {
+        try {
+            const newMessage = await prisma.message.create({
+                data: {
+                    content: `🔔 Yêu cầu gọi nhân viên`,
+                    senderType: 'STAFF', // Coi như hệ thống/nhân viên thông báo
+                    senderId: 'SYSTEM',
+                    chatSessionId: data.chatSessionId
+                }
+            });
+
+            // Chỉ gửi lại cho người yêu cầu và nhân viên
+            socket.emit('receive_message', newMessage);
+            io.to('staff_room').emit('receive_message', newMessage);
+
+            io.emit('staff_notification', {
+                type: 'CALL_STAFF',
+                tableId: data.tableId,
+                tableName: data.tableName,
+                message: `Bàn ${data.tableName} đang gọi nhân viên!`
+            });
+        } catch (error) {
+            console.error('Lỗi khi xử lý gọi nhân viên:', error);
+        }
     });
 
     socket.on('update_cart', (data: any) => {

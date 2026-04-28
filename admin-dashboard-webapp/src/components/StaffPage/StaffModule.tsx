@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, ShieldAlert, CheckCircle2, XCircle, Check, X, Key } from 'lucide-react';
 import { useStaff } from '@/hooks/useStaff';
 import { staffService, User } from '@/services/staff.service';
+import Pagination from '@/components/ui/Pagination';
+
 
 interface UserUI extends User {
     isEdit?: boolean;
@@ -284,13 +286,12 @@ export default function StaffModule() {
                     </tbody>
                 </table>
 
-                {meta && meta.totalPages > 1 && (
-                    <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
-                        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition-colors text-sm font-medium">Trang trước</button>
-                        <span className="text-sm font-medium text-gray-500">Trang {page} / {meta.totalPages}</span>
-                        <button onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))} disabled={page === meta.totalPages} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition-colors text-sm font-medium">Trang sau</button>
-                    </div>
-                )}
+                <Pagination 
+                    page={page} 
+                    totalPages={meta?.totalPages || 0} 
+                    onPageChange={setPage} 
+                    totalItems={meta?.total}
+                />
             </div>
         </div>
     );

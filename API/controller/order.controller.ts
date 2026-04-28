@@ -5,6 +5,63 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const router = Router();
 
+/**
+ * HÀM HELPER: Tự động trừ kho dựa trên định mức nguyên liệu (Recipe)
+ * Gọi khi đơn hàng được phục vụ (SERVED)
+ */
+async function deductStockForOrder(orderId: string, userId: string | null, tx: any) {
+    try {
+        // 1. Lấy toàn bộ món ăn trong đơn hàng kèm công thức
+        const orderItems = await tx.orderItem.findMany({
+            where: { orderId },
+            include: {
+                menuItem: {
+                    include: {
+                        ingredients: {
+                            include: { ingredient: true }
+                        }
+                    }
+                }
+            }
+        });
+
+        for (const item of orderItems) {
+            // Nếu món không có định mức nguyên liệu thì bỏ qua
+            if (!item.menuItem.ingredients || item.menuItem.ingredients.length === 0) continue;
+
+            for (const recipeItem of item.menuItem.ingredients) {
+                const totalDeduct = item.quantity * recipeItem.quantity;
+
+                // 2. Tạo bản ghi giao dịch kho (EXPORT)
+                await tx.stockTransaction.create({
+                    data: {
+                        ingredientId: recipeItem.ingredientId,
+                        type: 'EXPORT',
+                        quantity: totalDeduct,
+                        note: `Khấu hao tự động: Đơn hàng #${orderId.slice(-4)} - Món: ${item.menuItem.name}`,
+                        userId: userId || 'SYSTEM' // Fallback nếu không có userId
+                    }
+                });
+
+                // 3. Cập nhật tồn kho thực tế
+                await tx.ingredient.update({
+                    where: { id: recipeItem.ingredientId },
+                    data: {
+                        currentStock: {
+                            decrement: totalDeduct
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Lỗi khi khấu hao kho tự động:', error);
+        // Không ném lỗi ra ngoài để tránh làm treo luồng thanh toán, 
+        // nhưng thực tế nên log lại để đối soát.
+    }
+}
+
+
 // Khách hàng tự đặt món qua QR
 router.post('/orders', async (req: Request, res: Response) => {
     try {
@@ -40,7 +97,8 @@ router.post('/orders', async (req: Request, res: Response) => {
                 menuItemId: item.menuItemId,
                 quantity: item.quantity,
                 priceAtTime: priceAtTime,
-                notes: item.notes || ''
+                notes: item.notes || '',
+                status: 'PENDING' // Trạng thái mặc định cho từng món
             });
         }
 
@@ -130,6 +188,7 @@ router.get('/orders', async (req: Request, res: Response) => {
                 }
 
                 whereClause.chatSessionId = activeSession.id;
+                whereClause.status = { notIn: ['COMPLETED', 'CANCELLED'] };
             } else {
                 whereClause.tableId = String(tableId);
             }
@@ -158,24 +217,59 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
         const { status } = req.body;
 
         const updatedOrder = await prisma.$transaction(async (tx) => {
+            // Cập nhật trạng thái Đơn hàng
             const order = await tx.order.update({
                 where: { id: String(id) },
                 data: { status },
                 include: { table: true }
             });
 
-            // Nếu đơn hàng được duyệt (PENDING), chuyển trạng thái bàn sang OCCUPIED
-            if (status === 'PENDING') {
+            // Đồng bộ trạng thái của các món ăn trong đơn (OrderItem)
+            // Nếu đơn ở trạng thái COOKING, READY, SERVED thì các món cũng vậy
+            if (['COOKING', 'READY', 'SERVED'].includes(status)) {
+                await tx.orderItem.updateMany({
+                    where: { orderId: String(id) },
+                    data: { status: status as any }
+                });
+            }
+
+            // Nếu Duyệt (COOKING/PENDING), chuyển trạng thái bàn sang OCCUPIED
+            if (status === 'COOKING' || status === 'PENDING') {
                 await tx.table.update({
                     where: { id: order.tableId },
                     data: { status: 'OCCUPIED' }
                 });
             }
 
+            // --- TASK 3: TỰ ĐỘNG KHẤU HAO KHO ---
+            // Nếu đơn hàng chuyển sang trạng thái SERVED (Đã phục vụ), thực hiện trừ kho
+            if (status === 'SERVED') {
+                const userId = req.body.userId || null;
+                await deductStockForOrder(String(id), userId, tx);
+            }
+
             return order;
         });
 
         res.status(200).json(updatedOrder);
+
+        // Phát tín hiệu Socket
+        const { io } = require('../index');
+        if (io) {
+            // Gửi cho khách hàng tại bàn đó
+            io.to(`table_${updatedOrder.tableId}`).emit('ORDER_STATUS_UPDATED', {
+                orderId: updatedOrder.id,
+                status: updatedOrder.status,
+                message: `Đơn hàng #${updatedOrder.id.slice(-4)} đã chuyển sang: ${updatedOrder.status}`
+            });
+
+            // Gửi cho toàn bộ nhân viên cập nhật UI
+            io.emit('staff_notification', {
+                type: 'ORDER_UPDATED',
+                tableId: updatedOrder.tableId,
+                status: updatedOrder.status
+            });
+        }
     } catch (error) {
         console.error('Update Order Status Error:', error);
         res.status(500).json({ error: 'Lỗi khi cập nhật trạng thái đơn hàng' });

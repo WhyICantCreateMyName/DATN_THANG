@@ -60,6 +60,18 @@ export default function ChatPanel({ tableId, socket }: ChatPanelProps) {
                 ) : (
                     messages.map((msg) => {
                         const isStaff = msg.senderType === 'STAFF';
+                        const isSystem = msg.senderId === 'SYSTEM';
+
+                        if (isSystem) {
+                            return (
+                                <div key={msg.id} className="flex justify-center my-2">
+                                    <span className="text-[10px] bg-gray-100 text-gray-400 px-3 py-1 rounded-full font-black uppercase tracking-widest border border-gray-200 shadow-sm">
+                                        {msg.content}
+                                    </span>
+                                </div>
+                            );
+                        }
+
                         return (
                             <div 
                                 key={msg.id} 
@@ -69,7 +81,7 @@ export default function ChatPanel({ tableId, socket }: ChatPanelProps) {
                                     max-w-[85%] p-3 rounded-2xl text-sm font-medium shadow-sm
                                     ${isStaff 
                                         ? 'bg-blue-600 text-white rounded-tr-none' 
-                                        : 'bg-gray-100 text-gray-800 rounded-tl-none'}
+                                        : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'}
                                 `}>
                                     {msg.content}
                                 </div>
