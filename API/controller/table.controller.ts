@@ -156,6 +156,9 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                 ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'].includes(o.status)
             );
 
+            const { paymentMethod = 'CASH', orderIds } = req.body;
+            const isEWallet = paymentMethod === 'E_WALLET' || paymentMethod === 'TRANSFER';
+
             if (orderIds && Array.isArray(orderIds) && orderIds.length > 0) {
                 ordersToPay = ordersToPay.filter(o => orderIds.includes(o.id));
             }
@@ -172,7 +175,8 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                         finalAmount: totalAmount,
                         tableId: String(id),
                         chatSessionId: activeSession.id,
-                        isPaid: true,
+                        isPaid: !isEWallet, // Nếu là điện tử thì chưa trả
+                        paymentMethod: paymentMethod as any,
                         orders: {
                             connect: ordersToPay.map(o => ({ id: o.id }))
                         }
@@ -180,38 +184,52 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                 });
                 invoiceId = invoice.id;
 
-                await tx.order.updateMany({
-                    where: { id: { in: ordersToPay.map(o => o.id) } },
-                    data: { status: 'COMPLETED' }
-                });
+                // Nếu đã trả (Tiền mặt) thì hoàn thành đơn luôn
+                if (!isEWallet) {
+                    await tx.payment.create({
+                        data: {
+                            amount: totalAmount,
+                            method: paymentMethod as any,
+                            invoiceId: invoice.id
+                        }
+                    });
+
+                    await tx.order.updateMany({
+                        where: { id: { in: ordersToPay.map(o => o.id) } },
+                        data: { status: 'COMPLETED' }
+                    });
+                }
             }
 
-            // Kiểm tra xem còn đơn hàng nào chưa thanh toán không
-            const remaining = await tx.order.count({
-                where: {
-                    chatSessionId: activeSession.id,
-                    status: { in: ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'] }
+            // Chỉ giải phóng bàn nếu đã thanh toán hết (isPaid = true)
+            let isFullyPaid = false;
+            if (!isEWallet) {
+                const remaining = await tx.order.count({
+                    where: {
+                        chatSessionId: activeSession.id,
+                        status: { in: ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'] }
+                    }
+                });
+                isFullyPaid = remaining === 0;
+
+                if (isFullyPaid) {
+                    await tx.chatSession.update({
+                        where: { id: activeSession.id },
+                        data: { isActive: false, endTime: new Date() }
+                    });
+                    await tx.table.update({
+                        where: { id: String(id) },
+                        data: { status: 'AVAILABLE' }
+                    });
                 }
-            });
-
-            const isFullyPaid = remaining === 0;
-
-            if (isFullyPaid) {
-                await tx.chatSession.update({
-                    where: { id: activeSession.id },
-                    data: { isActive: false, endTime: new Date() }
-                });
-                await tx.table.update({
-                    where: { id: String(id) },
-                    data: { status: 'AVAILABLE' }
-                });
             }
 
             return { 
-                message: isFullyPaid ? 'Bàn đã được đóng' : 'Thanh toán một phần thành công', 
+                message: isFullyPaid ? 'Bàn đã được đóng' : (isEWallet ? 'Yêu cầu thanh toán điện tử đã được tạo' : 'Thanh toán một phần thành công'), 
                 invoiceId, 
                 total: totalAmount,
-                isFullyPaid
+                isFullyPaid,
+                paymentMethod
             };
         });
 

@@ -22,7 +22,9 @@ export default function POSModule() {
         socket,
         handleApprove, handleCancel, handleUpdateStatus, handleCheckout, handleMoveOrder, handleMergeTables,
         calculateTotal,
-        mutateTables, mutateWaitingOrders
+        mutateTables, mutateWaitingOrders,
+        mutateReservations,
+        activeReservations
     } = usePOS();
 
     // Khi chọn bàn, xóa thông báo tin nhắn chưa đọc của bàn đó
@@ -35,7 +37,7 @@ export default function POSModule() {
     const hasNewOrder = (id: string) => waitingOrders.some(o => o.tableId === id);
 
     return (
-        <div className="flex h-[calc(100vh-120px)] gap-6 overflow-hidden">
+        <div className="flex h-[calc(100vh-160px)] gap-6 overflow-hidden">
             <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto" />
             <audio ref={notificationAudioRef} src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto" />
 
@@ -43,9 +45,10 @@ export default function POSModule() {
             <div className="w-[30%] min-w-[320px]">
                 <TableMap
                     tables={tables || []}
+                    reservations={activeReservations}
                     selectedTableId={selectedTableId}
                     onSelectTable={setSelectedTableId}
-                    onRefresh={() => { mutateTables(); mutateWaitingOrders(); }}
+                    onRefresh={() => { mutateTables(); mutateWaitingOrders(); mutateReservations(); }}
                     tableHasNewOrder={hasNewOrder}
                     unreadTables={unreadTables}
                     isLoading={isTablesLoading}

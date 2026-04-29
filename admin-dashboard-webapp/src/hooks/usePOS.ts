@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import useSWR from 'swr';
+import api from '@/services/axios';
 import { useTable } from '@/hooks/useTable';
 import { useOrders } from '@/hooks/useOrders';
 import { useSocket } from '@/hooks/useSocket';
 import { orderService } from '@/services/order.service';
 import { tableService } from '@/services/table.service';
+import { reservationService } from '@/services/reservation.service';
 
 export const usePOS = () => {
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [unreadTables, setUnreadTables] = useState<string[]>([]);
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
-    
+
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
     const socket = useSocket();
@@ -18,16 +21,27 @@ export const usePOS = () => {
     const { tables, isLoading: isTablesLoading, mutateTables, checkoutTable } = useTable();
 
     // 2. Đơn hàng của bàn đang chọn
-    const { 
-        orders: activeOrders, 
-        isLoading: isOrdersLoading, 
-        approveOrder, 
-        cancelOrder, 
-        mutate: mutateActiveOrders 
+    const {
+        orders: activeOrders,
+        isLoading: isOrdersLoading,
+        approveOrder,
+        cancelOrder,
+        mutate: mutateActiveOrders
     } = useOrders(selectedTableId ? { tableId: selectedTableId, onlyActive: true } : undefined);
 
     // 3. Đơn hàng chờ duyệt
     const { orders: waitingOrders, mutate: mutateWaitingOrders } = useOrders({ status: 'WAITING_APPROVAL' });
+
+    // 4. Lịch hẹn đặt bàn
+    const { data: reservations, mutate: mutateReservations } = useSWR(
+        ['reservations'],
+        () => reservationService.getReservations(),
+        { refreshInterval: 30000 }
+    );
+
+    const activeReservations = useMemo(() =>
+        reservations?.filter((r: any) => ['PENDING', 'CONFIRMED', 'ARRIVED'].includes(r.status)) || [],
+        [reservations]);
 
     const selectedTable = useMemo(() => tables?.find(t => t.id === selectedTableId), [tables, selectedTableId]);
 
@@ -36,7 +50,7 @@ export const usePOS = () => {
         if (!audioRef.current) return;
         if (waitingOrders.length > 0) {
             audioRef.current.loop = true;
-            audioRef.current.play().catch(() => {});
+            audioRef.current.play().catch(() => { });
         } else {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
@@ -49,7 +63,7 @@ export const usePOS = () => {
 
         socket.on('staff_notification', (data: any) => {
             if (notificationAudioRef.current) {
-                notificationAudioRef.current.play().catch(() => {});
+                notificationAudioRef.current.play().catch(() => { });
             }
 
             if (data.type === 'NEW_MESSAGE' && data.tableId !== selectedTableId) {
@@ -80,10 +94,23 @@ export const usePOS = () => {
         mutateActiveOrders(); mutateWaitingOrders(); mutateTables();
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (paymentMethod: string = 'CASH') => {
         if (!selectedTableId || !selectedTable) return;
         const ids = selectedOrderIds.length > 0 ? selectedOrderIds : undefined;
-        await checkoutTable(selectedTableId, ids);
+        const result = await checkoutTable(selectedTableId, ids, paymentMethod);
+        
+        if (paymentMethod === 'E_WALLET' && result?.invoiceId) {
+            try {
+                const payRes = await api.post('/payment/vnpay/create-url', { invoiceId: result.invoiceId });
+                if (payRes.data.url) {
+                    window.open(payRes.data.url, '_blank');
+                }
+            } catch (error) {
+                console.error('Lỗi tạo thanh toán VNPay:', error);
+                alert('Không thể tạo liên kết thanh toán VNPay');
+            }
+        }
+        
         setSelectedOrderIds([]);
         mutateTables(); mutateWaitingOrders(); mutateActiveOrders();
     };
@@ -101,13 +128,13 @@ export const usePOS = () => {
     };
 
     const calculateTotal = () => {
-        const orders = selectedOrderIds.length > 0 
+        const orders = selectedOrderIds.length > 0
             ? activeOrders.filter(o => selectedOrderIds.includes(o.id))
             : activeOrders;
-            
+
         const subTotal = orders.reduce((sum, o) => sum + o.totalAmount, 0);
         const totalDiscount = orders.reduce((sum, o) => sum + (o.discountAmount || 0), 0);
-        
+
         return {
             subTotal,
             totalDiscount,
@@ -131,6 +158,7 @@ export const usePOS = () => {
         socket,
         handleApprove, handleCancel, handleUpdateStatus, handleCheckout, handleMoveOrder, handleMergeTables,
         calculateTotal,
-        mutateTables, mutateWaitingOrders
+        mutateTables, mutateWaitingOrders, mutateReservations,
+        activeReservations
     };
 };

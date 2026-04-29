@@ -1,33 +1,34 @@
 import useSWR from 'swr';
-import { menuService } from '../services/menu.service';
-import { tableService } from '../services/table.service';
-import { staffService } from '../services/staff.service';
+import api from '@/services/axios';
 
 export const useDashboard = () => {
-    // Kéo 50 mẩu dữ liệu làm mẫu
-    const { data: menuRes } = useSWR('menu_items_dash', () => menuService.getMenuItems({ limit: 50 }));
-    const { data: tablesRes } = useSWR('tables_dash', () => tableService.getTables({ limit: 50 }));
-    const { data: staffsRes } = useSWR('staffs_dash', () => staffService.getStaffs({ limit: 50 }));
+    const { data: statsRes, isLoading, mutate } = useSWR('dashboard_stats', async () => {
+        const res = await api.get('/dashboard/stats');
+        return res.data;
+    });
 
-    const tables = tablesRes?.data;
-    const staffs = staffsRes?.data;
-    const menuItems = menuRes?.data;
-
-    const totalTables = tablesRes?.meta?.total || 1; 
-    const occupiedTables = tables?.filter((t: any) => t.status === 'OCCUPIED').length || 0;
-    const fillRate = Math.round((occupiedTables / totalTables) * 100);
-
-    const activeStaffs = staffs?.filter((s: any) => s.isActive).length || 0;
-    const totalStaffs = staffsRes?.meta?.total || 0;
+    const data = statsRes || {
+        todayRevenue: 0,
+        last7DaysRevenue: [],
+        popularItems: [],
+        stockAlerts: [],
+        stats: {
+            totalTables: 0,
+            occupiedTables: 0,
+            fillRate: 0,
+            totalStaffs: 0,
+            totalOrdersToday: 0
+        }
+    };
 
     return {
-        tables,
-        staffs,
-        menuItems,
-        totalTables,
-        occupiedTables,
-        fillRate,
-        activeStaffs,
-        totalStaffs
+        ...data,
+        // Map back to old names for compatibility if needed
+        totalTables: data.stats.totalTables,
+        occupiedTables: data.stats.occupiedTables,
+        fillRate: data.stats.fillRate,
+        totalStaffs: data.stats.totalStaffs,
+        isLoading,
+        mutate
     };
 };

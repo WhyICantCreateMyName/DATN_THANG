@@ -14,7 +14,8 @@ import {
     ChefHat,
     MessageCircle,
     Package,
-    Ticket
+    Ticket,
+    CalendarCheck
 } from 'lucide-react';
 
 const SIDEBAR_TABS = [
@@ -25,6 +26,7 @@ const SIDEBAR_TABS = [
     { name: 'Thực đơn', link: constants.ROUTES.MENU, icon: UtensilsCrossed, roles: ['ADMIN', 'CASHIER', 'KITCHEN'] },
     { name: 'Nguyên liệu', link: constants.ROUTES.INGREDIENTS, icon: Package, roles: ['ADMIN', 'KITCHEN'] },
     { name: 'Khuyến mãi', link: constants.ROUTES.VOUCHERS, icon: Ticket, roles: ['ADMIN'] },
+    { name: 'Đặt bàn', link: constants.ROUTES.RESERVATIONS, icon: CalendarCheck, roles: ['ADMIN', 'CASHIER'] },
     { name: 'Nhân sự', link: constants.ROUTES.STAFF, icon: Users, roles: ['ADMIN'] },
 ];
 

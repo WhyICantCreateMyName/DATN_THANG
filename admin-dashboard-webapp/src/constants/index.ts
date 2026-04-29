@@ -20,7 +20,8 @@ export default {
         POS: '/pos',
         KITCHEN: '/kitchen',
         INGREDIENTS: '/ingredients',
-        VOUCHERS: '/vouchers'
+        VOUCHERS: '/vouchers',
+        RESERVATIONS: '/reservations'
     },
     PAGINATION: {
         DEFAULT_LIMIT: 12,

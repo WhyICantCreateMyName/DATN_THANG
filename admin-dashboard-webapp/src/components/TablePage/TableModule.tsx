@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Plus, Trash2, QrCode as QrIcon, Download, LibrarySquare, Check, X, Edit2 } from 'lucide-react';
+import { Plus, Trash2, QrCode as QrIcon, Download, LibrarySquare, Check, X, Edit2, LayoutGrid, Calendar } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import useSWR from 'swr';
 import { useTable } from '@/hooks/useTable';
 import { tableService, Table } from '@/services/table.service';
+import { reservationService, Reservation } from '@/services/reservation.service';
 import constants from '@/constants';
 
 interface TableUI extends Table {
@@ -14,7 +16,9 @@ interface TableUI extends Table {
 
 export default function TableModule() {
     const { tables, meta, page, setPage, mutateTables } = useTable();
+    const { data: reservations } = useSWR<Reservation[]>('/reservations', () => reservationService.getReservations());
     const [localTables, setLocalTables] = React.useState<TableUI[]>([]);
+    const [selectedTableForReservations, setSelectedTableForReservations] = useState<Table | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -165,14 +169,19 @@ export default function TableModule() {
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[calc(100vh-120px)] flex flex-col overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800">Quản lý Bàn & QR Code</h2>
-                    <p className="text-sm text-gray-500 mt-1">Sơ đồ bố trí và mã quét đặt món điện tử</p>
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <LibrarySquare className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 tracking-tight">Quản lý Bàn & QR Code</h2>
+                        <p className="text-sm text-gray-500 font-medium italic">Sơ đồ bố trí và mã quét đặt món điện tử</p>
+                    </div>
                 </div>
                 <button
                     onClick={handleAddTable}
                     disabled={isSaving}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-lg shadow-blue-500/30 transition-colors flex items-center gap-2"
+                    className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/30 transition-all flex items-center gap-2"
                 >
                     <Plus className="w-4 h-4" />
                     Thêm Bàn
@@ -195,6 +204,16 @@ export default function TableModule() {
                             <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                 {!table.isEdit && !table.isCreate && (
                                     <>
+                                        <button 
+                                            onClick={() => setSelectedTableForReservations(table)}
+                                            className="p-1.5 hover:bg-indigo-50 text-indigo-400 rounded-lg transition-colors relative"
+                                            title="Xem lịch đặt bàn"
+                                        >
+                                            <Calendar className="w-4 h-4" />
+                                            {reservations?.some(r => r.tableId === table.id && ['CONFIRMED', 'ARRIVED'].includes(r.status)) && (
+                                                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                                            )}
+                                        </button>
                                         <button onClick={() => handleEditTable(table.id)} className="p-1.5 hover:bg-blue-50 text-blue-400 rounded-lg transition-colors">
                                             <Edit2 className="w-4 h-4" />
                                         </button>
@@ -245,7 +264,13 @@ export default function TableModule() {
                                 </form>
                             ) : (
                                 <>
-                                    <h3 className="text-xl font-extrabold text-gray-800 mt-2">Bàn {table.name.length === 1 ? `0${table.name}` : table.name}</h3>
+                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${table.status === 'AVAILABLE' ? 'bg-green-50 text-green-500' :
+                                        table.status === 'OCCUPIED' ? 'bg-blue-50 text-blue-500' :
+                                            table.status === 'RESERVED' ? 'bg-orange-50 text-orange-500' : 'bg-gray-50 text-gray-400'
+                                        }`}>
+                                        <LayoutGrid className="w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-xl font-extrabold text-gray-800">Bàn {table.name.length === 1 ? `0${table.name}` : table.name}</h3>
                                     <p className="text-sm text-gray-500 mt-1">{table.capacity} Ghế ngồi</p>
 
                                     <div className="mt-6 mb-4 p-3 bg-gray-50 rounded-xl relative group/qr">
@@ -297,6 +322,75 @@ export default function TableModule() {
                     </div>
                 )}
             </div>
+
+            {/* MODAL LỊCH ĐẶT BÀN */}
+            {selectedTableForReservations && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                                    <Calendar className="w-6 h-6 text-indigo-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-gray-900 uppercase">Lịch đặt: Bàn {selectedTableForReservations.name}</h3>
+                                    <p className="text-xs text-gray-400 font-bold">Danh sách các yêu cầu đặt trước</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setSelectedTableForReservations(null)}
+                                className="w-10 h-10 rounded-xl hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="p-8 max-h-[60vh] overflow-y-auto">
+                            <div className="space-y-4">
+                                {reservations?.filter(r => r.tableId === selectedTableForReservations.id && ['CONFIRMED', 'ARRIVED'].includes(r.status)).length === 0 ? (
+                                    <div className="py-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">
+                                        Chưa có lịch đặt nào
+                                    </div>
+                                ) : (
+                                    reservations?.filter(r => r.tableId === selectedTableForReservations.id && ['CONFIRMED', 'ARRIVED'].includes(r.status))
+                                        .sort((a, b) => new Date(a.reservationTime).getTime() - new Date(b.reservationTime).getTime())
+                                        .map(res => (
+                                            <div key={res.id} className="p-5 bg-gray-50 rounded-2xl border border-gray-100 flex justify-between items-center group hover:bg-indigo-50/50 transition-all">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-black text-gray-900 uppercase">{res.customerName}</span>
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${res.status === 'ARRIVED' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                                                            {res.status === 'ARRIVED' ? 'Đã đến' : 'Đã xác nhận'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-xs text-gray-500 font-bold">
+                                                        <div className="flex items-center gap-1">
+                                                            <Calendar className="w-3 h-3" />
+                                                            {new Date(res.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                            {" - "}
+                                                            {new Date(res.reservationTime).toLocaleDateString('vi-VN')}
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <Plus className="w-3 h-3" />
+                                                            {res.guests} người
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                )}
+                            </div>
+                        </div>
+                        <div className="p-8 bg-gray-50 border-t border-gray-100">
+                            <button 
+                                onClick={() => setSelectedTableForReservations(null)}
+                                className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all"
+                            >
+                                Đóng lại
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

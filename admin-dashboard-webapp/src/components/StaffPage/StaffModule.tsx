@@ -113,12 +113,16 @@ export default function StaffModule() {
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[calc(100vh-120px)] flex flex-col overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <ShieldAlert className="w-6 h-6 text-indigo-500" />
-                        Quản lý Nhân Sự & Phân Quyền
-                    </h2>
-                    <p className="text-sm text-gray-500 mt-1">Quản trị danh sách tài khoản, vai trò và trạng thái nhân viên</p>
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <ShieldAlert className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 tracking-tight">
+                            Quản lý Nhân Sự & Phân Quyền
+                        </h2>
+                        <p className="text-sm text-gray-500 font-medium">Quản trị danh sách tài khoản, vai trò và trạng thái nhân viên</p>
+                    </div>
                 </div>
                 <button
                     onClick={handleAddStaff}

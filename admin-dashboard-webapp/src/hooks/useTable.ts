@@ -11,9 +11,10 @@ export const useTable = () => {
         { refreshInterval: 30000 }
     );
     
-    const checkoutTable = async (id: string, orderIds?: string[]) => {
-        await tableService.checkoutTable(id, orderIds);
+    const checkoutTable = async (id: string, orderIds?: string[], paymentMethod: string = 'CASH') => {
+        const result = await tableService.checkoutTable(id, orderIds, paymentMethod);
         mutateTables(); // Refresh lại danh sách bàn
+        return result;
     };
 
     return {

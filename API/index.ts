@@ -21,6 +21,9 @@ import ingredientRoutes from './controller/ingredient.controller';
 import recipeRoutes from './controller/recipe.controller';
 import voucherRoutes from './controller/voucher.controller';
 import customerRoutes from './controller/customer.controller';
+import dashboardRoutes from './controller/dashboard.controller';
+import reservationRoutes from './controller/reservation.controller';
+import paymentRoutes from './controller/payment.controller';
 import { initMinio } from './utils/minio';
 
 const app = express();
@@ -56,8 +59,11 @@ app.use('/', chatRoutes);
 app.use('/', orderItemRoutes);
 app.use('/', ingredientRoutes);
 app.use('/', recipeRoutes);
+app.use('/', paymentRoutes);
 app.use('/', voucherRoutes);
 app.use('/', customerRoutes);
+app.use('/', dashboardRoutes);
+app.use('/', reservationRoutes);
 
 // ==========================================
 // SOCKET.IO LOGIC

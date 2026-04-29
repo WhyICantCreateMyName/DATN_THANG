@@ -42,12 +42,17 @@ model Table {
 model Reservation {
   id              String            @id @default(uuid())
   customerName    String
-  phone           String
+  customerPhone   String
+  guests          Int
   reservationTime DateTime
-  guestCount      Int
+  note            String?
   status          ReservationStatus @default(PENDING)
-  tableId         String
-  table           Table             @relation(fields: [tableId], references: [id])
+  
+  tableId         String?           // Không bắt buộc khi mới đặt online
+  table           Table?            @relation(fields: [tableId], references: [id])
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
 model Category {
@@ -119,7 +124,8 @@ model Invoice {
   tax         Float     @default(0)
   discount    Float     @default(0)
   finalAmount Float
-  isPaid      Boolean   @default(true)
+  isPaid      Boolean   @default(false)
+  paymentMethod PaymentMethod @default(CASH)
   issuedAt    DateTime  @default(now())
 
   tableId     String
@@ -136,6 +142,7 @@ model Payment {
   id        String        @id @default(uuid())
   amount    Float
   method    PaymentMethod
+  vnpayTransactionNo String?
   paidAt    DateTime      @default(now())
   invoiceId String
   invoice   Invoice       @relation(fields: [invoiceId], references: [id])
@@ -248,6 +255,7 @@ enum OrderItemStatus {
 enum ReservationStatus {
   PENDING
   CONFIRMED
+  ARRIVED
   CANCELLED
   COMPLETED
   NO_SHOW
@@ -270,13 +278,10 @@ model ChatSession {
   // - True: Đang mở (Khách đang ăn).
   // - False: Đã thanh toán, khóa phiên lại.
   isActive  Boolean   @default(true) 
-  
   startTime DateTime  @default(now())
   endTime   DateTime?
- 
   tableId   String
   table     Table     @relation(fields: [tableId], references: [id])
-  
   messages  Message[]
   orders    Order[]
   invoices  Invoice[]
@@ -291,16 +296,13 @@ enum SenderType {
 model Message {
   id            String      @id @default(uuid())
   content       String      @db.Text
-  
   senderType    SenderType
   
   // Nơi chứa "Căn cước ẩn danh":
   // - Nếu là Khách: Lưu cái mã `guestId` sinh ra từ JWT (VD: "guest_x8f9a")
   // - Nếu là Nhân viên: Lưu ID của tài khoản nhân viên (VD: "user_123")
   senderId      String      
-  
   createdAt     DateTime    @default(now())
-  
   chatSessionId String
   chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
 }

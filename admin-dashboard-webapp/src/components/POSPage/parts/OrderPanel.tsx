@@ -40,7 +40,7 @@ export default function OrderPanel({
     if (!table) return null;
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {/* Header */}
             <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                 <div>
@@ -52,9 +52,11 @@ export default function OrderPanel({
                 </div>
                 <div className="flex flex-col items-end">
                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm
-                        ${table.status === 'AVAILABLE' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}
+                        ${table.status === 'AVAILABLE' ? 'bg-green-500 text-white' : 
+                          table.status === 'RESERVED' ? 'bg-indigo-600 text-white' : 'bg-orange-500 text-white'}
                     `}>
-                        {table.status === 'AVAILABLE' ? 'Trống' : 'Đang phục vụ'}
+                        {table.status === 'AVAILABLE' ? 'Trống' : 
+                         table.status === 'RESERVED' ? 'Đã đặt bàn' : 'Đang phục vụ'}
                     </span>
                 </div>
             </div>

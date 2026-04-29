@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Utensils, QrCode, ArrowRight, Star } from 'lucide-react';
+import { Utensils, QrCode, ArrowRight, Star, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HomeModule() {
@@ -52,13 +52,23 @@ export default function HomeModule() {
           </div>
         </div>
 
-        <Link 
-          href="/menu"
-          className="w-full py-4 bg-gray-900 text-white rounded-[2rem] font-bold text-lg flex items-center justify-center gap-2 hover:bg-black transition-all shadow-xl active:scale-95 group mb-10"
-        >
-          Khám phá thực đơn ngay
-          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-        </Link>
+        <div className="flex flex-col w-full gap-4 mb-10">
+          <Link 
+            href="/menu"
+            className="w-full py-4 bg-gray-900 text-white rounded-[2rem] font-bold text-lg flex items-center justify-center gap-2 hover:bg-black transition-all shadow-xl active:scale-95 group"
+          >
+            Khám phá thực đơn
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          <Link 
+            href="/reservation"
+            className="w-full py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-[2rem] font-bold text-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm active:scale-95 group"
+          >
+            <Calendar className="w-5 h-5" />
+            Đặt bàn trực tuyến
+          </Link>
+        </div>
         
         <p className="text-sm text-gray-400">
           Vui lòng quét mã QR tại bàn để bắt đầu trải nghiệm đầy đủ

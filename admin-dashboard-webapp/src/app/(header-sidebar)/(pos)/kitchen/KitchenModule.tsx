@@ -56,26 +56,26 @@ export default function KitchenModule() {
     };
 
     return (
-        <div className="space-y-8 pb-20">
-            {/* Header */}
-            <div className="flex items-center justify-between">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[calc(100vh-120px)] flex flex-col overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-                        <Flame className="w-8 h-8 text-white animate-pulse" />
+                    <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <ChefHat className="w-6 h-6 text-orange-600" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black text-gray-900 tracking-tight">Khu vực Nhà Bếp</h1>
-                        <p className="text-gray-500 font-medium">Chế biến các món ăn đang chờ thực hiện.</p>
+                        <h2 className="text-xl font-bold text-gray-800 tracking-tight">
+                            Khu vực Nhà Bếp & Chế biến
+                        </h2>
+                        <p className="text-sm text-gray-500 font-medium italic italic">Điều phối và thực hiện các đơn hàng từ khách hàng</p>
                     </div>
                 </div>
-                <div className="px-6 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-ping" />
-                    <span className="font-bold text-gray-700">Đang Online</span>
+                <div className="px-5 py-2.5 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Hệ thống sẵn sàng</span>
                 </div>
             </div>
 
-            {/* Orders Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="flex-1 p-8 bg-white overflow-y-auto">
                 {orders.length === 0 ? (
                     <div className="col-span-full py-32 bg-white rounded-[3rem] border border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400">
                         <ChefHat className="w-16 h-16 opacity-10 mb-4" />
