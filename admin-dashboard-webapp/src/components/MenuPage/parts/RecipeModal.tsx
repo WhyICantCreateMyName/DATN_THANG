@@ -47,10 +47,10 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
         try {
             const [recipeRes, ingredientsRes] = await Promise.all([
                 axios.get(`http://localhost:4000/recipes/${menuItem.id}`),
-                ingredientService.getAllIngredients()
+                ingredientService.getAllIngredients(1, 1000) // Lấy nhiều để tìm kiếm
             ]);
             setRecipe(recipeRes.data);
-            setAllIngredients(ingredientsRes);
+            setAllIngredients(ingredientsRes.data || []);
         } catch (error) {
             console.error("Lỗi tải dữ liệu công thức:", error);
         } finally {
@@ -86,7 +86,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
     // --- LOGIC AI SUGGESTION ---
     const handleAiSuggest = async () => {
         if (!confirm('AI sẽ gợi ý công thức dựa trên tên món ăn. Bạn có muốn tiếp tục?')) return;
-        
+
         setIsAiLoading(true);
         try {
             // 1. Gọi API gợi ý từ AI
@@ -103,7 +103,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
             const unmatched = [];
 
             for (const suggest of suggestions) {
-                const match = allIngredients.find(ing => 
+                const match = allIngredients.find(ing =>
                     ing.name.toLowerCase().includes(suggest.name.toLowerCase()) ||
                     suggest.name.toLowerCase().includes(ing.name.toLowerCase())
                 );
@@ -112,13 +112,13 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
                     // Logic quy đổi đơn vị chuẩn hoá
                     const dbUnit = normalizeUnit(match.unit);
                     const aiUnit = normalizeUnit(suggest.unit);
-                    
+
                     let finalQty = suggest.quantity;
-                    
+
                     // Quy đổi G/ML sang KG/L nếu cần
                     if ((dbUnit === 'kg' && aiUnit === 'g') || (dbUnit === 'l' && aiUnit === 'ml')) {
                         finalQty = suggest.quantity / 1000;
-                    } 
+                    }
 
                     await axios.post('http://localhost:4000/recipes', {
                         menuItemId: menuItem.id,
@@ -174,7 +174,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
         }
     };
 
-    const filteredIngredients = allIngredients.filter(ing => 
+    const filteredIngredients = allIngredients.filter(ing =>
         ing.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !recipe.some(r => r.ingredientId === ing.id)
     );
@@ -182,7 +182,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                
+
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-gray-50 to-white">
                     <div className="flex items-center gap-4">
@@ -200,10 +200,10 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    
+
                     {/* AI Suggest Button */}
                     <div className="space-y-4">
-                        <button 
+                        <button
                             onClick={handleAiSuggest}
                             disabled={isAiLoading}
                             className="w-full p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl text-white font-bold flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-indigo-500/30 transition-all group disabled:opacity-50"
@@ -223,7 +223,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
                                     <h4 className="text-sm font-bold text-amber-800 flex items-center gap-2">
                                         <AlertCircle className="w-4 h-4" /> Nguyên liệu mới (Chưa có trong kho)
                                     </h4>
-                                    <button 
+                                    <button
                                         onClick={handleQuickAddMissing}
                                         className="text-[10px] bg-amber-600 text-white px-3 py-1 rounded-full font-bold hover:bg-amber-700 transition-all"
                                     >
@@ -250,14 +250,14 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
                             <div className="space-y-3">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input 
+                                    <input
                                         placeholder="Tìm nguyên liệu trong kho..."
                                         className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500/20 outline-none"
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
                                     />
                                 </div>
-                                <select 
+                                <select
                                     className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none"
                                     value={selectedIngId}
                                     onChange={e => setSelectedIngId(e.target.value)}
@@ -268,14 +268,14 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
                                     ))}
                                 </select>
                                 <div className="flex gap-2">
-                                    <input 
+                                    <input
                                         type="number"
                                         placeholder="Số lượng..."
                                         className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none"
                                         value={quantity}
                                         onChange={e => setQuantity(e.target.value)}
                                     />
-                                    <button 
+                                    <button
                                         onClick={handleAddManual}
                                         className="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-md"
                                     >
@@ -295,7 +295,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
                             ) : recipe.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-gray-400">
                                     <AlertCircle className="w-8 h-8 mb-2 opacity-20" />
-                                    <p className="text-xs italic text-center px-4">Chưa có định mức nào.<br/>Hãy thử dùng AI gợi ý hoặc thêm thủ công.</p>
+                                    <p className="text-xs italic text-center px-4">Chưa có định mức nào.<br />Hãy thử dùng AI gợi ý hoặc thêm thủ công.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
@@ -307,7 +307,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
                                                     Định mức: {item.quantity} {item.ingredient.unit} / món
                                                 </div>
                                             </div>
-                                            <button 
+                                            <button
                                                 onClick={() => handleDelete(item.ingredientId)}
                                                 className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                             >
@@ -323,7 +323,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
 
                 {/* Footer */}
                 <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
-                    <button 
+                    <button
                         onClick={onClose}
                         className="px-8 py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition-all shadow-lg"
                     >
