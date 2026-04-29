@@ -13,7 +13,8 @@ import {
     LayoutPanelTop,
     ChefHat,
     MessageCircle,
-    Package
+    Package,
+    Ticket
 } from 'lucide-react';
 
 const SIDEBAR_TABS = [
@@ -23,6 +24,7 @@ const SIDEBAR_TABS = [
     { name: 'Sơ đồ Bàn', link: constants.ROUTES.TABLES, icon: LibrarySquare, roles: ['ADMIN', 'CASHIER', 'WAITER'] },
     { name: 'Thực đơn', link: constants.ROUTES.MENU, icon: UtensilsCrossed, roles: ['ADMIN', 'CASHIER', 'KITCHEN'] },
     { name: 'Nguyên liệu', link: constants.ROUTES.INGREDIENTS, icon: Package, roles: ['ADMIN', 'KITCHEN'] },
+    { name: 'Khuyến mãi', link: constants.ROUTES.VOUCHERS, icon: Ticket, roles: ['ADMIN'] },
     { name: 'Nhân sự', link: constants.ROUTES.STAFF, icon: Users, roles: ['ADMIN'] },
 ];
 

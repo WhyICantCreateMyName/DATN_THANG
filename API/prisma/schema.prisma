@@ -19,6 +19,14 @@ model User {
   stockTransactions StockTransaction[]
 }
 
+model Customer {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Table {
   id           String        @id @default(uuid())
   name         String        @unique
@@ -74,20 +82,23 @@ model MenuItemIngredient {
 }
 
 model Order {
-  id            String      @id @default(uuid())
-  status        OrderStatus @default(PENDING)
-  totalAmount   Float       @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  tableId       String
-  waiterId      String?
-  chatSessionId String?
-  invoiceId     String?
-  invoice       Invoice?    @relation(fields: [invoiceId], references: [id])
-  table         Table       @relation(fields: [tableId], references: [id])
-  waiter        User?       @relation("WaiterOrders", fields: [waiterId], references: [id])
-  chatSession   ChatSession? @relation(fields: [chatSessionId], references: [id])
-  items         OrderItem[]
+  id             String      @id @default(uuid())
+  status         OrderStatus @default(PENDING)
+  totalAmount    Float       @default(0)
+  discountAmount Float       @default(0)
+  voucherCode    String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  tableId        String
+  customerPhone  String?
+  waiterId       String?
+  chatSessionId  String?
+  invoiceId      String?
+  invoice        Invoice?    @relation(fields: [invoiceId], references: [id])
+  table          Table       @relation(fields: [tableId], references: [id])
+  waiter         User?       @relation("WaiterOrders", fields: [waiterId], references: [id])
+  chatSession    ChatSession? @relation(fields: [chatSessionId], references: [id])
+  items          OrderItem[]
 }
 
 model OrderItem {
@@ -163,6 +174,32 @@ model StockTransaction {
   supplier     Supplier?       @relation(fields: [supplierId], references: [id])
 }
 
+model Voucher {
+  id            String       @id @default(uuid())
+  code          String       @unique
+  description   String?
+  discountType  DiscountType @default(FIXED)
+  discountValue Float        // Giá trị giảm (tiền mặt hoặc %)
+  maxDiscount   Float?       // Giảm tối đa (cho loại %)
+  minOrderValue Float        @default(0) // Giá trị đơn tối thiểu để áp dụng
+  
+  usageLimit           Int?         // Tổng số lượt sử dụng tối đa (null = vô hạn)
+  usedCount            Int          @default(0)
+  maxUsagePerCustomer  Int?         // Số lần tối đa 1 khách được dùng (null = vô hạn)
+  
+  isActive      Boolean      @default(true)
+  startDate     DateTime?
+  endDate       DateTime?
+  
+  // Lưu các điều kiện dưới dạng JSON
+  // Ví dụ: { "type": "ORDER_COUNT", "min": 5 }
+  // Hoặc: { "type": "NEW_USER" }
+  conditions    Json?        @default("[]")
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
 enum Role {
   ADMIN
   KITCHEN
@@ -214,6 +251,11 @@ enum ReservationStatus {
   CANCELLED
   COMPLETED
   NO_SHOW
+}
+
+enum DiscountType {
+  FIXED
+  PERCENTAGE
 }
 
 // ==========================================

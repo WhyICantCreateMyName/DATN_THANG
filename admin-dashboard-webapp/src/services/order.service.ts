@@ -15,6 +15,8 @@ export interface Order {
     id: string;
     status: 'WAITING_APPROVAL' | 'PENDING' | 'COOKING' | 'READY' | 'SERVED' | 'COMPLETED' | 'CANCELLED';
     totalAmount: number;
+    discountAmount?: number;
+    voucherCode?: string;
     items: OrderItem[];
     createdAt: string;
     tableId: string;

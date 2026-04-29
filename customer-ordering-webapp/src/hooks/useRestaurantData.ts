@@ -5,6 +5,8 @@ import { useSocket } from './useSocket';
 export interface OrderHistory {
     id: string;
     totalAmount: number;
+    discountAmount: number;
+    voucherCode: string | null;
     status: string;
     createdAt: string;
     items: {

@@ -104,7 +104,15 @@ export const usePOS = () => {
         const orders = selectedOrderIds.length > 0 
             ? activeOrders.filter(o => selectedOrderIds.includes(o.id))
             : activeOrders;
-        return orders.reduce((sum, o) => sum + o.totalAmount, 0);
+            
+        const subTotal = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+        const totalDiscount = orders.reduce((sum, o) => sum + (o.discountAmount || 0), 0);
+        
+        return {
+            subTotal,
+            totalDiscount,
+            finalTotal: Math.max(0, subTotal - totalDiscount)
+        };
     };
 
     const toggleOrderSelection = (id: string) => {

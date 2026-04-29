@@ -83,7 +83,7 @@ export default function POSModule() {
                             />
 
                             <CheckoutPanel
-                                total={calculateTotal()}
+                                totals={calculateTotal()}
                                 canCheckout={selectedTable.status === 'OCCUPIED'}
                                 onCheckout={handleCheckout}
                                 isPartial={selectedOrderIds.length > 0}

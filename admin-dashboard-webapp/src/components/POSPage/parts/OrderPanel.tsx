@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardList, AlertCircle, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { ClipboardList, AlertCircle, Clock, CheckCircle2, XCircle, Ticket } from 'lucide-react';
 import { Order } from '@/services/order.service';
 
 interface OrderPanelProps {
@@ -132,6 +132,22 @@ export default function OrderPanel({
                                         </div>
                                     ))}
                                 </div>
+
+                                {/* Voucher Info */}
+                                {order.voucherCode && (
+                                    <div className="mt-4 p-3 bg-amber-50 rounded-2xl border border-dashed border-amber-200 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-1.5 bg-amber-500 text-white rounded-lg shadow-sm">
+                                                <Ticket className="w-3.5 h-3.5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-amber-800 tracking-wider">VOUCHER: {order.voucherCode}</p>
+                                                <p className="text-[9px] text-amber-600 font-bold uppercase tracking-tighter">Đã áp dụng ưu đãi</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-black text-amber-600">-{order.discountAmount?.toLocaleString()}đ</span>
+                                    </div>
+                                )}
 
                                 {/* Status Controls */}
                                 <div className="mt-6 pt-6 border-t border-gray-50 flex gap-2">

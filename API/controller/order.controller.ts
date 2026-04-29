@@ -65,7 +65,7 @@ async function deductStockForOrder(orderId: string, userId: string | null, tx: a
 // Khách hàng tự đặt món qua QR
 router.post('/orders', async (req: Request, res: Response) => {
     try {
-        const { tableId, items } = req.body;
+        const { tableId, items, voucherCode, customerPhone } = req.body;
 
         if (!tableId || !items || !items.length) {
             return res.status(400).json({ error: 'Dữ liệu đơn hàng không hợp lệ' });
@@ -75,8 +75,8 @@ router.post('/orders', async (req: Request, res: Response) => {
         const table = await prisma.table.findUnique({ where: { id: tableId } });
         if (!table) return res.status(404).json({ error: 'Không tìm thấy bàn' });
 
-        // 2. Lấy thông tin giá món ăn và tính tổng tiền
-        let totalAmount = 0;
+        // 2. Lấy thông tin giá món ăn và tính tổng tiền tạm tính
+        let subTotal = 0;
         const orderItemsData: any = [];
         const itemDetails: string[] = [];
 
@@ -90,7 +90,7 @@ router.post('/orders', async (req: Request, res: Response) => {
             }
 
             const priceAtTime = menuItem.price;
-            totalAmount += priceAtTime * item.quantity;
+            subTotal += priceAtTime * item.quantity;
             itemDetails.push(`${item.quantity} x ${menuItem.name}`);
 
             orderItemsData.push({
@@ -98,22 +98,71 @@ router.post('/orders', async (req: Request, res: Response) => {
                 quantity: item.quantity,
                 priceAtTime: priceAtTime,
                 notes: item.notes || '',
-                status: 'PENDING' // Trạng thái mặc định cho từng món
+                status: 'PENDING'
             });
         }
 
-        // 3. Tìm phiên chat đang hoạt động của bàn
+        // 3. Xử lý Voucher (Xác thực lại ở Backend)
+        let discountAmount = 0;
+        let validatedVoucher: any = null;
+
+        if (voucherCode) {
+            validatedVoucher = await prisma.voucher.findUnique({
+                where: { code: voucherCode.toUpperCase() }
+            });
+
+            if (validatedVoucher && validatedVoucher.isActive) {
+                // Kiểm tra điều kiện cơ bản
+                const now = new Date();
+                const isTimed = (!validatedVoucher.startDate || now >= validatedVoucher.startDate) &&
+                                (!validatedVoucher.endDate || now <= validatedVoucher.endDate);
+                const isUnderLimit = !validatedVoucher.usageLimit || validatedVoucher.usedCount < validatedVoucher.usageLimit;
+                const isMinOrderMet = subTotal >= validatedVoucher.minOrderValue;
+
+                // Kiểm tra giới hạn dùng mỗi khách
+                let isCustomerLimitMet = true;
+                if (validatedVoucher.maxUsagePerCustomer && customerPhone) {
+                    const usedCount = await prisma.order.count({
+                        where: {
+                            customerPhone,
+                            voucherCode: validatedVoucher.code,
+                            status: { not: 'CANCELLED' }
+                        }
+                    });
+                    if (usedCount >= validatedVoucher.maxUsagePerCustomer) {
+                        isCustomerLimitMet = false;
+                    }
+                }
+
+                if (isTimed && isUnderLimit && isMinOrderMet && isCustomerLimitMet) {
+                    // Tính số tiền giảm
+                    if (validatedVoucher.discountType === 'FIXED') {
+                        discountAmount = validatedVoucher.discountValue;
+                    } else {
+                        discountAmount = (subTotal * validatedVoucher.discountValue) / 100;
+                        if (validatedVoucher.maxDiscount) {
+                            discountAmount = Math.min(discountAmount, validatedVoucher.maxDiscount);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Tìm phiên chat đang hoạt động của bàn
         const activeSession = await prisma.chatSession.findFirst({
             where: { tableId, isActive: true }
         });
 
-        // 4. Tạo Order và OrderItems trong một Transaction
+        // 5. Tạo Order và OrderItems trong một Transaction
         const newOrder = await prisma.$transaction(async (tx) => {
             const order = await tx.order.create({
                 data: {
                     tableId,
-                    totalAmount,
-                    chatSessionId: activeSession?.id || null, // Gắn ID phiên chat
+                    customerPhone,
+                    totalAmount: subTotal,
+                    discountAmount,
+                    voucherCode: validatedVoucher ? validatedVoucher.code : null,
+                    chatSessionId: activeSession?.id || null,
                     status: 'WAITING_APPROVAL',
                     items: {
                         create: orderItemsData
@@ -126,6 +175,14 @@ router.post('/orders', async (req: Request, res: Response) => {
                     table: true
                 }
             });
+
+            // Cập nhật lượt dùng voucher nếu có áp dụng thành công
+            if (validatedVoucher && discountAmount > 0) {
+                await tx.voucher.update({
+                    where: { id: validatedVoucher.id },
+                    data: { usedCount: { increment: 1 } }
+                });
+            }
 
             return order;
         });

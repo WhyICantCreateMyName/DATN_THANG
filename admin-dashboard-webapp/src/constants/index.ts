@@ -19,7 +19,8 @@ export default {
         STAFF: '/staff',
         POS: '/pos',
         KITCHEN: '/kitchen',
-        INGREDIENTS: '/ingredients'
+        INGREDIENTS: '/ingredients',
+        VOUCHERS: '/vouchers'
     },
     PAGINATION: {
         DEFAULT_LIMIT: 12,

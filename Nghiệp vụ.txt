@@ -11,6 +11,10 @@ Giao tiếp Thời gian thực (Real-time Live Chat): Khách hàng sử dụng c
 
 Theo dõi Trạng thái Đơn hàng: Khách hàng theo dõi trực tiếp tiến độ món ăn trên điện thoại (Đã duyệt -> Đang nấu -> Sẵn sàng).
 
+Đăng ký & Nhận ưu đãi (Customer Authentication): Khách hàng có thể đăng ký thành viên bằng số điện thoại để nhận các đặc quyền riêng. Hệ thống sử dụng cơ chế JWT để duy trì phiên đăng nhập lâu dài (7 ngày), cho phép khách hàng chọn và áp dụng các mã Voucher (Khuyến mãi) trực tiếp vào giỏ hàng trước khi đặt món.
+
+Hệ thống Voucher thông minh: Khách hàng duyệt danh sách Voucher khả dụng, hệ thống tự động kiểm tra điều kiện áp dụng (Giá trị đơn tối thiểu, số lần sử dụng của cá nhân) và tính toán số tiền giảm giá theo thời gian thực (giảm theo % hoặc số tiền cố định).
+
 2. Phân hệ POS & Thu Ngân (Staff & Cashier Dashboard)
 **Đóng vai trò là trung tâm điều khiển tại quầy, tích hợp toàn bộ nghiệp vụ phục vụ, kiểm duyệt và thanh toán.
 
@@ -24,9 +28,11 @@ Tổng đài Hỗ trợ (Chat Hub): Hiển thị màn hình Live Chat tổng h�
 
 Đồng bộ Phục vụ (Kitchen Sync): Nhận thông báo tự động từ Bếp khi món ăn READY để nhân viên POS/Thu ngân hoặc nhân viên điều phối mang món ra và đổi trạng thái thành SERVED.
 
+Giám sát Khuyến mãi (Promotion Visibility): Trên màn hình POS, các đơn hàng có áp dụng Voucher được hiển thị nổi bật với mã khuyến mãi và số tiền giảm giá tương ứng. Nhân viên dễ dàng đối soát ưu đãi trước khi in hóa đơn cuối cùng cho khách.
+
 Thanh toán & Reset Phiên (Checkout & Session Reset - Nghiệp vụ cốt lõi):
 
-Hệ thống tự động gom toàn bộ các đơn (Order) phát sinh trong cùng một Phiên (ChatSession) vào một Hóa đơn (Invoice).
+Hệ thống tự động gom toàn bộ các đơn (Order) phát sinh trong cùng một Phiên (ChatSession) vào một Hóa đơn (Invoice), đồng thời khấu trừ tổng các khoản giảm giá từ Voucher đã áp dụng.
 
 Hỗ trợ thanh toán đa phương thức (Tiền mặt, Thẻ, Chuyển khoản QR).
 
@@ -61,3 +67,5 @@ Quản lý Chuỗi Cung ứng (Supply Chain): Quản lý hồ sơ Nhà cung cấ
 Quản lý Nhân sự & Phân quyền (Role Based Access Control): Cấp phát tài khoản và giới hạn quyền hạn truy cập theo chức năng (Admin, Waiter/Cashier, Kitchen).
 
 Báo cáo & Phân tích (Analytics): Trích xuất các báo cáo doanh thu theo kỳ, phân tích món ăn bán chạy, tỷ lệ lấp đầy bàn và chi phí hao hụt nguyên vật liệu để đưa ra quyết định kinh doanh.
+
+Quản lý Khuyến mãi (Marketing Tools): Admin chủ động thiết lập các chương trình Voucher với bộ quy tắc linh hoạt: Loại giảm giá, Giới hạn tổng số lượng, Giới hạn số lần sử dụng trên từng khách hàng, và các điều kiện kích hoạt tùy biến (VD: Chỉ dành cho khách hàng mới, hoặc khách đã hoàn thành tối thiểu n đơn hàng).

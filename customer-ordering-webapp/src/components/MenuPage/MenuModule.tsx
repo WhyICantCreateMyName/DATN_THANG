@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import api from '@/services/axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatWidget from '../Chat/ChatWidget';
-import { useRestaurantData } from '@/hooks/useRestaurantData';
-import { BellRing, Clock, ChefHat, ShoppingCart, Search, Plus, Minus, X, CheckCircle2, ChevronRight, Hash, ClipboardList } from 'lucide-react';
+import VoucherRegistrationModal from './VoucherRegistrationModal';
+import VoucherPickerModal from './VoucherPickerModal';
+import { useRestaurantData, OrderHistory } from '@/hooks/useRestaurantData';
+import { useAuth } from '@/contexts/AuthContext';
+import { BellRing, Clock, ChefHat, ShoppingCart, Search, Plus, Minus, X, CheckCircle2, ChevronRight, Hash, ClipboardList, Ticket, User as UserIcon } from 'lucide-react';
 interface MenuItem {
     id: string;
     name: string;
@@ -27,15 +30,7 @@ interface CartItem extends MenuItem {
     notes: string;
 }
 
-interface OrderHistory {
-    id: string;
-    totalAmount: number;
-    status: string;
-    items: {
-        quantity: number;
-        menuItem: MenuItem;
-    }[];
-}
+// OrderHistory is imported from useRestaurantData
 
 export default function MenuModule({ qrCode }: { qrCode?: string }) {
     const router = useRouter();
@@ -60,6 +55,12 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+    const [isPickerOpen, setIsPickerOpen] = useState(false);
+    const [selectedVoucher, setSelectedVoucher] = useState<any>(null);
+    const [discountAmount, setDiscountAmount] = useState(0);
+
+    const { customer } = useAuth();
 
     const getStatusInfo = (status: string) => {
         switch (status) {
@@ -138,7 +139,34 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
     };
 
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const finalAmount = Math.max(0, totalAmount - discountAmount);
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+    // Validate voucher whenever cart or selected voucher changes
+    useEffect(() => {
+        const validate = async () => {
+            if (!selectedVoucher || cart.length === 0) {
+                setDiscountAmount(0);
+                return;
+            }
+
+            try {
+                const res = await api.post('/vouchers/validate', {
+                    code: selectedVoucher.code,
+                    orderValue: totalAmount,
+                    customerInfo: customer ? { phone: customer.phone } : null
+                });
+                setDiscountAmount(res.data.discountAmount);
+            } catch (error: any) {
+                console.error('Voucher invalid:', error.response?.data?.error);
+                setSelectedVoucher(null);
+                setDiscountAmount(0);
+                // alert(error.response?.data?.error || 'Voucher không còn hiệu lực');
+            }
+        };
+
+        validate();
+    }, [cart, selectedVoucher, totalAmount, customer]);
 
     const handlePlaceOrder = async () => {
         if (!tableId) {
@@ -150,6 +178,8 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
         try {
             await api.post('/orders', {
                 tableId,
+                voucherCode: selectedVoucher?.code,
+                customerPhone: customer?.phone,
                 items: cart.map(i => ({
                     menuItemId: i.id,
                     quantity: i.quantity,
@@ -187,6 +217,20 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsVoucherModalOpen(true)}
+                        className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-600 rounded-full font-bold text-xs border border-amber-100 active:scale-95 transition-all shadow-sm"
+                    >
+                        {customer ? <UserIcon className="w-4 h-4" /> : <Ticket className="w-4 h-4" />}
+                        {customer ? (customer.name || customer.phone) : 'Nhận Voucher'}
+                    </button>
+                    <button
+                        onClick={() => setIsVoucherModalOpen(true)}
+                        className="sm:hidden p-2.5 bg-amber-50 text-amber-600 rounded-full shadow-md border border-amber-100 active:scale-95 transition-transform"
+                        title={customer ? "Tài khoản" : "Nhận Voucher"}
+                    >
+                        {customer ? <UserIcon className="w-5 h-5" /> : <Ticket className="w-5 h-5" />}
+                    </button>
                     <button
                         onClick={() => setIsHistoryOpen(true)}
                         className="p-2.5 bg-white rounded-full shadow-md border border-gray-100 active:scale-95 transition-transform"
@@ -371,15 +415,20 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                                         const statusInfo = getStatusInfo(order.status);
                                         return (
                                             <div key={order.id} className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 space-y-4">
-                                                <div className="flex justify-between items-center pb-3 border-b border-gray-50">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] font-black text-gray-300 uppercase">#{order.id.slice(-4)}</span>
-                                                        <span className={`px-3 py-1 ${statusInfo.color} text-[9px] font-black uppercase rounded-lg shadow-sm`}>
-                                                            {statusInfo.label}
-                                                        </span>
+                                                    <div className="flex justify-between items-center pb-3 border-b border-gray-50">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[9px] font-black text-gray-300 uppercase">#{order.id.slice(-4)}</span>
+                                                            <span className={`px-3 py-1 ${statusInfo.color} text-[9px] font-black uppercase rounded-lg shadow-sm`}>
+                                                                {statusInfo.label}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="font-black text-gray-900 block">{(order.totalAmount - (order.discountAmount || 0)).toLocaleString()}đ</span>
+                                                            {order.discountAmount > 0 && (
+                                                                <span className="text-[9px] font-bold text-green-500 italic">Tiết kiệm {order.discountAmount.toLocaleString()}đ</span>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <span className="font-black text-gray-900">{order.totalAmount.toLocaleString()}đ</span>
-                                                </div>
                                                 <div className="space-y-2">
                                                     {order.items.map((it, idx) => (
                                                         <div key={idx} className="flex justify-between text-xs items-center">
@@ -413,7 +462,7 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                         <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center font-bold text-sm">{totalItems}</div>
                         <span className="font-bold text-sm">Xem giỏ hàng</span>
                     </div>
-                    <span className="font-black text-amber-500 text-lg">{totalAmount.toLocaleString()}đ</span>
+                    <span className="font-black text-amber-500 text-lg">{finalAmount.toLocaleString()}đ</span>
                 </motion.div>
             )}
 
@@ -470,21 +519,74 @@ export default function MenuModule({ qrCode }: { qrCode?: string }) {
                                         </div>
                                     </div>
                                 ))}
+                                {cart.length > 0 && (
+                                    <div className="mt-8 pt-6 border-t border-gray-100">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <Ticket className="w-4 h-4 text-amber-500" />
+                                                <span className="text-sm font-black text-gray-800">Ưu đãi khuyến mãi</span>
+                                            </div>
+                                            <button 
+                                                onClick={() => setIsPickerOpen(true)}
+                                                className="text-xs font-black text-amber-600 uppercase tracking-wider"
+                                            >
+                                                {selectedVoucher ? 'Thay đổi' : 'Chọn ưu đãi'}
+                                            </button>
+                                        </div>
+                                        
+                                        {selectedVoucher ? (
+                                            <div className="flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                                                <div>
+                                                    <p className="text-xs font-black text-amber-800 tracking-tight">{selectedVoucher.code}</p>
+                                                    <p className="text-[10px] text-amber-600 font-bold">Tiết kiệm {discountAmount.toLocaleString()}đ</p>
+                                                </div>
+                                                <button onClick={() => setSelectedVoucher(null)} className="p-1.5 bg-white rounded-full text-amber-500 shadow-sm"><X size={12} /></button>
+                                            </div>
+                                        ) : (
+                                            <div 
+                                                onClick={() => setIsPickerOpen(true)}
+                                                className="p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+                                            >
+                                                <p className="text-[11px] font-bold text-gray-400 italic">Chọn voucher để nhận ưu đãi cho đơn hàng</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="p-8 bg-gray-50">
+                            <div className="p-8 bg-gray-50 space-y-4">
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between items-center px-2">
+                                        <span className="text-sm font-bold text-gray-500">Giảm giá:</span>
+                                        <span className="text-sm font-black text-green-500">-{discountAmount.toLocaleString()}đ</span>
+                                    </div>
+                                )}
                                 <button
                                     onClick={handlePlaceOrder}
                                     disabled={isSubmitting}
                                     className="w-full py-5 bg-amber-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-amber-500/30"
                                 >
-                                    {isSubmitting ? 'ĐANG GỬI...' : `GỬI ĐƠN HÀNG • ${totalAmount.toLocaleString()}đ`}
+                                    {isSubmitting ? 'ĐANG GỬI...' : `GỬI ĐƠN HÀNG • ${finalAmount.toLocaleString()}đ`}
                                 </button>
                             </div>
                         </motion.div>
                     </>
                 )}
             </AnimatePresence>
+            <VoucherRegistrationModal 
+                isOpen={isVoucherModalOpen}
+                onClose={() => setIsVoucherModalOpen(false)}
+            />
+            <VoucherPickerModal 
+                isOpen={isPickerOpen}
+                onClose={() => setIsPickerOpen(false)}
+                currentTotal={totalAmount}
+                selectedVoucherId={selectedVoucher?.id}
+                onSelect={(v) => {
+                    setSelectedVoucher(v);
+                    setIsPickerOpen(false);
+                }}
+            />
         </main>
     );
 }
