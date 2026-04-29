@@ -64,6 +64,8 @@ Quản lý Sơ đồ Bàn & Mã QR: Thiết lập khu vực, tạo bàn, cài đ
 
 Quản lý Chuỗi Cung ứng (Supply Chain): Quản lý hồ sơ Nhà cung cấp (Supplier), theo dõi tồn kho nguyên vật liệu (Ingredient) và thiết lập cảnh báo khi lượng tồn kho dưới mức tối thiểu (minStock).
 
+Dự báo & Đề xuất AI (AI-Powered Insights): Tích hợp trí tuệ nhân tạo để phân tích lịch sử bán hàng, xu hướng tiêu thụ và các yếu tố mùa vụ. Hệ thống tự động đưa ra các đề xuất nhập hàng thông minh (VD: "Món Bún Bò đang bán chạy, đề xuất nhập thêm 20kg Thịt bò để đảm bảo phục vụ cho cuối tuần"), giúp tối ưu vốn lưu động và giảm thiểu tình trạng lãng phí thực phẩm do hết hạn.
+
 Quản lý Nhân sự & Phân quyền (Role Based Access Control): Cấp phát tài khoản và giới hạn quyền hạn truy cập theo chức năng (Admin, Waiter/Cashier, Kitchen).
 
 Báo cáo & Phân tích (Analytics): Trích xuất các báo cáo doanh thu theo kỳ, phân tích món ăn bán chạy, tỷ lệ lấp đầy bàn và chi phí hao hụt nguyên vật liệu để đưa ra quyết định kinh doanh.
