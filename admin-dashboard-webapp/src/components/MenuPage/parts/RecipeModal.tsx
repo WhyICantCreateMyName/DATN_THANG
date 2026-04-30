@@ -11,6 +11,11 @@ const normalizeUnit = (unit: string): string => {
     if (['g', 'gram', 'gam', 'gr'].includes(u)) return 'g';
     if (['l', 'lít', 'lit', 'liter'].includes(u)) return 'l';
     if (['ml', 'mililit', 'milliliter'].includes(u)) return 'ml';
+    if (['quả', 'trái', 'cái', 'chiếc'].includes(u)) return 'quả';
+    if (['lọ', 'chai', 'hũ', 'bình'].includes(u)) return 'lọ';
+    if (['bịch', 'gói', 'túi'].includes(u)) return 'bịch';
+    if (['thùng', 'két', 'kiện'].includes(u)) return 'thùng';
+    if (['hộp', 'lon', 'pack'].includes(u)) return 'hộp';
     return u;
 };
 
@@ -174,6 +179,7 @@ export default function RecipeModal({ menuItem, onClose }: RecipeModalProps) {
         }
     };
 
+    console.log(allIngredients);
     const filteredIngredients = allIngredients.filter(ing =>
         ing.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !recipe.some(r => r.ingredientId === ing.id)

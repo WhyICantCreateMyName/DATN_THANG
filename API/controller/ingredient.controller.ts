@@ -99,7 +99,7 @@ router.post('/ingredients/transaction', async (req: Request, res: Response) => {
             // 2. Cập nhật tồn kho thực tế
             let adjustment = parseFloat(quantity);
             const currentIngredient = await tx.ingredient.findUnique({ where: { id: ingredientId } });
-            
+
             if (!currentIngredient) throw new Error('Nguyên liệu không tồn tại');
 
             if (type === 'EXPORT') {

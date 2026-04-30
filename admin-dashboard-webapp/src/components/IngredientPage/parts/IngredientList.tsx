@@ -182,12 +182,16 @@ export default function IngredientList({ ingredients, suppliers, mutateIngredien
                                                                 <option value="l">lít</option>
                                                                 <option value="ml">ml</option>
                                                             </optgroup>
-                                                            <optgroup label="Số lượng">
+                                                            <optgroup label="Số lượng/Khác">
                                                                 <option value="cái">cái</option>
+                                                                <option value="quả">quả</option>
                                                                 <option value="con">con</option>
                                                                 <option value="bó">bó</option>
                                                                 <option value="hộp">hộp</option>
-                                                                <option value="chai">chai</option>
+                                                                <option value="lọ">lọ</option>
+                                                                <option value="bịch">bịch</option>
+                                                                <option value="thùng">thùng</option>
+                                                                <option value="gói">gói</option>
                                                             </optgroup>
                                                         </select>
                                                     </div>

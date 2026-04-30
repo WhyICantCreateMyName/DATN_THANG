@@ -230,7 +230,11 @@ router.get('/orders', async (req: Request, res: Response) => {
         let whereClause: any = {};
 
         if (status) {
-            whereClause.status = status as any;
+            if (Array.isArray(status)) {
+                whereClause.status = { in: status as any[] };
+            } else {
+                whereClause.status = status as any;
+            }
         }
 
         if (tableId) {

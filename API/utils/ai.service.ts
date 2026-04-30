@@ -33,11 +33,13 @@ export async function getRecipeSuggestionFromAI(dishName: string, existingIngred
             1. ƯU TIÊN SỬ DỤNG TÊN TRONG DANH SÁCH CÓ SẴN: Nếu nguyên liệu cần thiết đã có tên tương tự trong danh sách trên, hãy sử dụng CHÍNH XÁC tên đó.
                (Ví dụ: Nếu trong kho có "Thịt bò" mà món ăn cần thịt bò, đừng gợi ý "Thịt bò thăn Úc", hãy dùng "Thịt bò").
             2. NỘI ĐỊA HÓA: Sử dụng tên gọi phổ thông nhất của Việt Nam cho các nguyên liệu mới (Ví dụ: "Hành tím", "Tỏi", "Nước mắm"...).
-            3. ĐƠN VỊ: Luôn dùng đơn vị nhỏ nhất là "g" (gram) hoặc "ml". KHÔNG dùng "kg", "lít".
+            3. ĐƠN VỊ: Chỉ được sử dụng một trong các đơn vị sau: "g", "ml", "quả", "lọ", "bịch", "thùng", "hộp".
+               - Luôn ưu tiên đơn vị nhỏ nhất: Dùng "g" thay vì "kg", "ml" thay vì "lít".
+               - Với các nguyên liệu dạng rời, dùng "quả" (ví dụ: Chanh, Trứng...).
             4. ĐỊNH DẠNG: Trả về DUY NHẤT một mảng JSON:
             [
                 {"name": "Tên nguyên liệu", "quantity": 150, "unit": "g"},
-                {"name": "Tên nguyên liệu 2", "quantity": 20, "unit": "ml"}
+                {"name": "Tên nguyên liệu 2", "quantity": 2, "unit": "quả"}
             ]
             5. Số lượng là ước tính cho 1 SUẤT ĂN đơn lẻ.
             

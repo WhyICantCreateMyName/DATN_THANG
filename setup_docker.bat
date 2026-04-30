@@ -18,6 +18,8 @@ call npx prisma generate
 echo Waiting for Database to be ready...
 timeout /t 5
 call npx prisma db push
+echo Seeding database...
+call npx prisma db seed
 cd ..
 
 echo.

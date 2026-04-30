@@ -31,7 +31,7 @@ export default function KitchenModule() {
 
     const fetchKitchenOrders = async () => {
         try {
-            const res = await api.get('/orders?status=PENDING');
+            const res = await api.get('/orders?status=PENDING&status=COOKING');
             setOrders(res.data);
         } catch (err) {
             console.error('Lỗi lấy đơn hàng bếp:', err);
@@ -48,7 +48,7 @@ export default function KitchenModule() {
 
     const handleCompleteOrder = async (orderId: string) => {
         try {
-            await api.patch(`/orders/${orderId}/status`, { status: 'COMPLETED' });
+            await api.patch(`/orders/${orderId}/status`, { status: 'READY' });
             fetchKitchenOrders();
         } catch (err) {
             alert('Lỗi khi cập nhật trạng thái đơn hàng');

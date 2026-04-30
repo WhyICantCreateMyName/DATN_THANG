@@ -64,14 +64,33 @@ export default function IngredientFormModal({ ingredient, suppliers, onClose, on
 
                         <div className="space-y-2">
                             <label className="text-xs font-semibold text-gray-500 ml-1">Đơn vị tính</label>
-                            <input 
-                                type="text" 
+                            <select 
                                 required
                                 value={formData.unit}
                                 onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                                placeholder="Kg, Bó, Túi..."
                                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium text-gray-800"
-                            />
+                            >
+                                <option value="">Chọn đơn vị...</option>
+                                <optgroup label="Khối lượng">
+                                    <option value="kg">kg</option>
+                                    <option value="g">g</option>
+                                </optgroup>
+                                <optgroup label="Thể tích">
+                                    <option value="l">lít</option>
+                                    <option value="ml">ml</option>
+                                </optgroup>
+                                <optgroup label="Số lượng/Khác">
+                                    <option value="cái">cái</option>
+                                    <option value="quả">quả</option>
+                                    <option value="con">con</option>
+                                    <option value="bó">bó</option>
+                                    <option value="hộp">hộp</option>
+                                    <option value="lọ">lọ</option>
+                                    <option value="bịch">bịch</option>
+                                    <option value="thùng">thùng</option>
+                                    <option value="gói">gói</option>
+                                </optgroup>
+                            </select>
                         </div>
 
                         <div className="space-y-2">
