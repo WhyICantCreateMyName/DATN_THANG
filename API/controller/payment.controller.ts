@@ -4,17 +4,10 @@ import crypto from 'crypto';
 import moment from 'moment';
 import qs from 'qs';
 import { io } from '../index';
+import { createVNPayUrl, verifyVNPayReturn } from '../utils/vnpay';
 
 const router = Router();
 const prisma = new PrismaClient();
-
-// Cấu hình VNPay từ .env
-const vnp_TmnCode = process.env.VNP_TMN_CODE || '';
-const vnp_HashSecret = process.env.VNP_HASH_SECRET || '';
-const vnp_Url = process.env.VNP_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-const vnp_ReturnUrl = process.env.VNP_RETURN_URL || 'http://localhost:3000/payment-result';
-
-import { createVNPayUrl, verifyVNPayReturn } from '../utils/vnpay';
 
 // 1. Tạo URL thanh toán
 router.post('/payment/vnpay/create-url', async (req: Request, res: Response) => {
@@ -56,25 +49,25 @@ router.post('/payment/vnpay/create-url', async (req: Request, res: Response) => 
     }
 });
 
-// 2. VNPay IPN (Callback từ server VNPay)
-router.get('/payment/vnpay/ipn', async (req: Request, res: Response) => {
+
+// 3. VNPay Callback (Dành cho trình duyệt khách hàng chuyển hướng về)
+router.get('/payment/vnpay/callback', async (req: Request, res: Response) => {
     try {
         let vnp_Params: any = { ...req.query };
-
-        // Dùng hàm verify đã được map chuẩn
         const isValid = verifyVNPayReturn(vnp_Params);
-
-        console.log('=== VNPAY IPN DEBUG (MAPPED LOGIC) ===');
-        console.log('Is valid signature:', isValid);
-
-        if (!isValid) {
-            return res.status(200).json({ RspCode: '97', Message: 'Invalid Checksum' });
-        }
-
-        const invoiceId = vnp_Params['vnp_TxnRef'];
         const responseCode = vnp_Params['vnp_ResponseCode'];
+        const invoiceId = vnp_Params['vnp_TxnRef'];
         const vnpayTranNo = vnp_Params['vnp_TransactionNo'];
         const amount = Number(vnp_Params['vnp_Amount']) / 100;
+
+        if (!isValid) {
+            return res.send(`
+                <div style="text-align: center; padding: 50px; font-family: sans-serif;">
+                    <h2 style="color: red;">Lỗi xác thực chữ ký!</h2>
+                    <p>Giao dịch có thể không an toàn. Vui lòng liên hệ nhân viên.</p>
+                </div>
+            `);
+        }
 
         const invoice = await prisma.invoice.findUnique({
             where: { id: invoiceId },
@@ -82,19 +75,11 @@ router.get('/payment/vnpay/ipn', async (req: Request, res: Response) => {
         });
 
         if (!invoice) {
-            return res.status(200).json({ RspCode: '01', Message: 'Order not found' });
+            return res.send('<h2>Không tìm thấy hóa đơn!</h2>');
         }
 
-        if (invoice.finalAmount !== amount) {
-            return res.status(200).json({ RspCode: '04', Message: 'Amount mismatch' });
-        }
-
-        if (invoice.isPaid) {
-            return res.status(200).json({ RspCode: '02', Message: 'Order already confirmed' });
-        }
-
-        if (responseCode === '00') {
-            // Giao dịch thành công - Thực hiện nghiệp vụ cập nhật đơn hàng
+        if (responseCode === '00' && !invoice.isPaid) {
+            // Giao dịch thành công - Cập nhật DB
             await prisma.$transaction(async (tx) => {
                 await tx.invoice.update({
                     where: { id: invoiceId },
@@ -134,18 +119,36 @@ router.get('/payment/vnpay/ipn', async (req: Request, res: Response) => {
                 }
             });
 
+            // Bắn Socket báo cho Admin POS đóng mã QR
             if (io) {
                 io.to(`table_${invoice.tableId}`).emit('PAYMENT_SUCCESS', { invoiceId });
                 io.emit('staff_notification', { type: 'TABLE_UPDATED' });
             }
 
-            return res.status(200).json({ RspCode: '00', Message: 'Confirm Success' });
-        } else {
-            return res.status(200).json({ RspCode: '00', Message: 'Confirm Success (Transaction Failed)' });
+            return res.send(`
+                <div style="text-align: center; padding: 100px 20px; font-family: -apple-system, sans-serif; background: #f9fafb; min-height: 100vh;">
+                    <div style="background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: inline-block; max-width: 400px;">
+                        <div style="color: #10b981; font-size: 64px; margin-bottom: 20px;">✓</div>
+                        <h1 style="margin: 0 0 10px; color: #111827; font-weight: 800; text-transform: uppercase; letter-spacing: -0.025em;">Thanh toán xong!</h1>
+                        <p style="color: #6b7280; font-size: 16px; line-height: 1.5;">Cảm ơn quý khách đã ủng hộ nhà hàng. Chúc quý khách một ngày tốt lành!</p>
+                        <div style="margin-top: 30px; border-top: 1px solid #f3f4f6; padding-top: 20px;">
+                            <p style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">Mã hóa đơn: ${invoice.id.slice(0, 8)}</p>
+                        </div>
+                    </div>
+                </div>
+            `);
         }
+
+        // Trường hợp đã thanh toán rồi hoặc lỗi giao dịch từ VNPay
+        return res.send(`
+            <div style="text-align: center; padding: 50px; font-family: sans-serif;">
+                <h2>Trạng thái giao dịch: ${responseCode === '00' ? 'Đã được xác nhận trước đó' : 'Không thành công'}</h2>
+                <p>Vui lòng kiểm tra lại ứng dụng ngân hàng hoặc liên hệ nhân viên quán.</p>
+            </div>
+        `);
     } catch (error) {
-        console.error('VNPay IPN Error:', error);
-        res.status(200).json({ RspCode: '99', Message: 'Unknown error' });
+        console.error('VNPay Callback Error:', error);
+        res.status(500).send('Đã có lỗi xảy ra trong quá trình xử lý thanh toán.');
     }
 });
 

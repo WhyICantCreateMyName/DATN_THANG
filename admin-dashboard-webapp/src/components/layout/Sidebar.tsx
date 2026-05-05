@@ -20,9 +20,9 @@ import {
 
 const SIDEBAR_TABS = [
     { name: 'Tổng quan', link: constants.ROUTES.DASHBOARD, icon: LayoutDashboard, roles: ['ADMIN'] },
-    { name: 'Bán hàng (POS)', link: constants.ROUTES.POS, icon: LayoutPanelTop, roles: ['ADMIN', 'CASHIER', 'WAITER'] },
+    { name: 'Bán hàng (POS)', link: constants.ROUTES.POS, icon: LayoutPanelTop, roles: ['ADMIN', 'CASHIER'] },
     { name: 'Nhà bếp', link: constants.ROUTES.KITCHEN, icon: ChefHat, roles: ['ADMIN', 'KITCHEN'] },
-    { name: 'Sơ đồ Bàn', link: constants.ROUTES.TABLES, icon: LibrarySquare, roles: ['ADMIN', 'CASHIER', 'WAITER'] },
+    { name: 'Sơ đồ Bàn', link: constants.ROUTES.TABLES, icon: LibrarySquare, roles: ['ADMIN', 'CASHIER'] },
     { name: 'Thực đơn', link: constants.ROUTES.MENU, icon: UtensilsCrossed, roles: ['ADMIN', 'CASHIER', 'KITCHEN'] },
     { name: 'Nguyên liệu', link: constants.ROUTES.INGREDIENTS, icon: Package, roles: ['ADMIN', 'KITCHEN'] },
     { name: 'Khuyến mãi', link: constants.ROUTES.VOUCHERS, icon: Ticket, roles: ['ADMIN'] },

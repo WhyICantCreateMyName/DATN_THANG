@@ -16,6 +16,7 @@ export default function POSModule() {
         unreadTables, setUnreadTables,
         selectedOrderIds, toggleOrderSelection,
         vnpayUrl, setVnpayUrl,
+        isPaymentSuccess,
         tables, isTablesLoading,
         activeOrders, isOrdersLoading,
         waitingOrders,
@@ -117,6 +118,7 @@ export default function POSModule() {
                     url={vnpayUrl} 
                     onClose={() => setVnpayUrl(null)} 
                     tableName={selectedTable?.name}
+                    isSuccess={isPaymentSuccess}
                 />
             )}
         </div>
