@@ -1,5 +1,6 @@
 @echo off
 echo Dang kiem tra cap nhat tu GitHub...
-git pull
+git fetch --all
+git reset --hard origin/main
 echo Cap nhat xong!
 pause
