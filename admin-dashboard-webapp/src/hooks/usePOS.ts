@@ -83,7 +83,7 @@ export const usePOS = () => {
             setIsPaymentSuccess(true); // Chuyển sang giao diện thành công
             mutateTables();
             if (selectedTableId) mutateActiveOrders();
-            
+
             // Tự động đóng hoàn toàn sau 4 giây
             setTimeout(() => {
                 setVnpayUrl(null);
@@ -91,8 +91,8 @@ export const usePOS = () => {
             }, 4000);
         });
 
-        return () => { 
-            socket.off('staff_notification'); 
+        return () => {
+            socket.off('staff_notification');
             socket.off('PAYMENT_SUCCESS');
         };
     }, [socket, selectedTableId, mutateTables, mutateWaitingOrders, mutateActiveOrders]);
@@ -109,15 +109,33 @@ export const usePOS = () => {
     };
 
     const handleUpdateStatus = async (id: string, status: string) => {
-        await orderService.updateStatus(id, status);
-        mutateActiveOrders(); mutateWaitingOrders(); mutateTables();
+        try {
+            // Cập nhật Optimistic (Cập nhật cache local ngay lập tức)
+            mutateActiveOrders((currentOrders: any) => {
+                if (!currentOrders) return currentOrders;
+                return currentOrders.map((o: any) => 
+                    o.id === id ? { ...o, status: status } : o
+                );
+            }, false);
+
+            await orderService.updateStatus(id, status);
+            
+            // Sau khi thành công, re-fetch chuẩn
+            mutateActiveOrders(); 
+            mutateWaitingOrders(); 
+            mutateTables();
+        } catch (error) {
+            console.error('[POS] Lỗi khi cập nhật trạng thái:', error);
+            alert('Không thể cập nhật trạng thái đơn hàng');
+            mutateActiveOrders();
+        }
     };
 
     const handleCheckout = async (paymentMethod: string = 'CASH') => {
         if (!selectedTableId || !selectedTable) return;
         const ids = selectedOrderIds.length > 0 ? selectedOrderIds : undefined;
         const result = await checkoutTable(selectedTableId, ids, paymentMethod);
-        
+
         if (paymentMethod === 'E_WALLET' && result?.invoiceId) {
             try {
                 const payRes = await api.post('/payment/vnpay/create-url', { invoiceId: result.invoiceId });
@@ -130,7 +148,7 @@ export const usePOS = () => {
                 alert('Không thể tạo liên kết thanh toán VNPay');
             }
         }
-        
+
         setSelectedOrderIds([]);
         mutateTables(); mutateWaitingOrders(); mutateActiveOrders();
     };

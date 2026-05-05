@@ -11,7 +11,30 @@ const router = Router();
  */
 async function deductStockForOrder(orderId: string, userId: string | null, tx: any) {
     try {
-        // 1. Lấy toàn bộ món ăn trong đơn hàng kèm công thức
+        // 1. Lấy thông tin đơn hàng để lấy waiterId nếu có
+        const order = await tx.order.findUnique({
+            where: { id: orderId },
+            select: { waiterId: true }
+        });
+
+        // 2. Tìm một User ID hợp lệ làm fallback (ví dụ Admin đầu tiên)
+        let finalUserId = userId || order?.waiterId;
+        
+        if (!finalUserId) {
+            const firstAdmin = await tx.user.findFirst({
+                where: { role: 'ADMIN' },
+                select: { id: true }
+            });
+            finalUserId = firstAdmin?.id;
+        }
+
+        // Nếu vẫn không tìm thấy User nào (trường hợp DB trống user), đành log lỗi và thoát
+        if (!finalUserId) {
+            console.error('Không tìm thấy User ID hợp lệ để thực hiện trừ kho');
+            return;
+        }
+
+        // 3. Lấy toàn bộ món ăn trong đơn hàng kèm công thức
         const orderItems = await tx.orderItem.findMany({
             where: { orderId },
             include: {
@@ -26,24 +49,23 @@ async function deductStockForOrder(orderId: string, userId: string | null, tx: a
         });
 
         for (const item of orderItems) {
-            // Nếu món không có định mức nguyên liệu thì bỏ qua
             if (!item.menuItem.ingredients || item.menuItem.ingredients.length === 0) continue;
 
             for (const recipeItem of item.menuItem.ingredients) {
                 const totalDeduct = item.quantity * recipeItem.quantity;
 
-                // 2. Tạo bản ghi giao dịch kho (EXPORT)
+                // 4. Tạo bản ghi giao dịch kho (EXPORT)
                 await tx.stockTransaction.create({
                     data: {
                         ingredientId: recipeItem.ingredientId,
                         type: 'EXPORT',
                         quantity: totalDeduct,
                         note: `Khấu hao tự động: Đơn hàng #${orderId.slice(-4)} - Món: ${item.menuItem.name}`,
-                        userId: userId || 'SYSTEM' // Fallback nếu không có userId
+                        userId: finalUserId
                     }
                 });
 
-                // 3. Cập nhật tồn kho thực tế
+                // 5. Cập nhật tồn kho thực tế
                 await tx.ingredient.update({
                     where: { id: recipeItem.ingredientId },
                     data: {
@@ -56,8 +78,9 @@ async function deductStockForOrder(orderId: string, userId: string | null, tx: a
         }
     } catch (error) {
         console.error('Lỗi khi khấu hao kho tự động:', error);
-        // Không ném lỗi ra ngoài để tránh làm treo luồng thanh toán, 
-        // nhưng thực tế nên log lại để đối soát.
+        // Ném lỗi ra để Transaction cha biết mà Rollback nếu cần, 
+        // hoặc bắt lại nếu muốn tiếp tục nhưng ở đây nên để nó báo lỗi rõ ràng.
+        throw error; 
     }
 }
 
