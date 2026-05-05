@@ -14,6 +14,8 @@ const vnp_HashSecret = process.env.VNP_HASH_SECRET || '';
 const vnp_Url = process.env.VNP_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
 const vnp_ReturnUrl = process.env.VNP_RETURN_URL || 'http://localhost:3000/payment-result';
 
+import { createVNPayUrl, verifyVNPayReturn } from '../utils/vnpay';
+
 // 1. Tạo URL thanh toán
 router.post('/payment/vnpay/create-url', async (req: Request, res: Response) => {
     try {
@@ -28,54 +30,18 @@ router.post('/payment/vnpay/create-url', async (req: Request, res: Response) => 
             return res.status(404).json({ error: 'Không tìm thấy hóa đơn' });
         }
 
-        const createDate = moment().format('YYYYMMDDHHmmss');
-        let ipAddr = req.headers['x-forwarded-for'] ||
+        const ipAddrRaw = req.headers['x-forwarded-for'] ||
             req.connection.remoteAddress ||
-            req.socket.remoteAddress;
+            req.socket.remoteAddress ||
+            '127.0.0.1';
 
-        if (Array.isArray(ipAddr)) ipAddr = ipAddr[0];
+        const ipAddr = (Array.isArray(ipAddrRaw) ? ipAddrRaw[0] : String(ipAddrRaw)) || '127.0.0.1';
 
-        const vnp_Params: any = {
-            vnp_Version: '2.1.0',
-            vnp_Command: 'pay',
-            vnp_TmnCode: vnp_TmnCode,
-            vnp_Locale: 'vn',
-            vnp_CurrCode: 'VND',
-            vnp_TxnRef: invoice.id.toString(),
-            vnp_OrderInfo: `Thanh toan hoa don ban ${invoice.table?.name || 'N/A'}`,
-            vnp_OrderType: 'other',
-            vnp_Amount: Math.round(invoice.finalAmount * 100),
-            vnp_ReturnUrl: vnp_ReturnUrl,
-            vnp_IpAddr: ipAddr || '127.0.0.1',
-            vnp_CreateDate: createDate,
-        };
+        const orderInfo = `Thanh toan hoa don ban ${invoice.table?.name || 'N/A'}`;
+        const amount = invoice.finalAmount;
 
-        if (bankCode) {
-            vnp_Params['vnp_BankCode'] = bankCode;
-        }
-
-        // Sắp xếp các tham số theo thứ tự alphabet
-        const sortedParams = Object.keys(vnp_Params)
-            .sort()
-            .reduce((acc: any, key) => {
-                acc[key] = vnp_Params[key];
-                return acc;
-            }, {});
-
-        // Tạo signData đúng chuẩn - Dùng qs với encode: false
-        const signData = qs.stringify(sortedParams, { encode: false });
-        
-        // Tạo chữ ký HMAC-SHA512
-        const hmac = crypto.createHmac('sha512', vnp_HashSecret);
-        const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-
-        console.log('=== VNPAY CREATE DEBUG ===');
-        console.log('SignData:', signData);
-        console.log('SecureHash:', signed);
-
-        // Thêm hash và tạo URL cuối cùng (vẫn dùng encode: false cho URL)
-        sortedParams['vnp_SecureHash'] = signed;
-        const paymentUrl = vnp_Url + '?' + qs.stringify(sortedParams, { encode: false });
+        // Gọi hàm tiện ích đã map từ dự án chuẩn
+        const paymentUrl = createVNPayUrl(invoice.id, amount, orderInfo, ipAddr);
 
         // Cập nhật phương thức thanh toán cho hóa đơn
         await prisma.invoice.update({
@@ -95,28 +61,13 @@ router.get('/payment/vnpay/ipn', async (req: Request, res: Response) => {
     try {
         let vnp_Params: any = { ...req.query };
 
-        const secureHash = vnp_Params['vnp_SecureHash'];
-        delete vnp_Params['vnp_SecureHash'];
-        delete vnp_Params['vnp_SecureHashType'];
+        // Dùng hàm verify đã được map chuẩn
+        const isValid = verifyVNPayReturn(vnp_Params);
 
-        // Sắp xếp và tạo signData giống hệt lúc tạo URL
-        const sortedParams = Object.keys(vnp_Params)
-            .sort()
-            .reduce((acc: any, key) => {
-                acc[key] = vnp_Params[key];
-                return acc;
-            }, {});
+        console.log('=== VNPAY IPN DEBUG (MAPPED LOGIC) ===');
+        console.log('Is valid signature:', isValid);
 
-        const signData = qs.stringify(sortedParams, { encode: false });
-        const hmac = crypto.createHmac("sha512", vnp_HashSecret);
-        const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
-
-        console.log('=== VNPAY IPN DEBUG ===');
-        console.log('Received Hash :', secureHash);
-        console.log('Calculated    :', signed);
-        console.log('SignData IPN  :', signData);
-
-        if (secureHash !== signed) {
+        if (!isValid) {
             return res.status(200).json({ RspCode: '97', Message: 'Invalid Checksum' });
         }
 

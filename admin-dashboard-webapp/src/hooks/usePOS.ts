@@ -12,6 +12,7 @@ export const usePOS = () => {
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [unreadTables, setUnreadTables] = useState<string[]>([]);
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+    const [vnpayUrl, setVnpayUrl] = useState<string | null>(null);
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -75,7 +76,18 @@ export const usePOS = () => {
             if (selectedTableId) mutateActiveOrders();
         });
 
-        return () => { socket.off('staff_notification'); };
+        // Lắng nghe sự kiện thanh toán thành công để đóng QR Modal
+        socket.on('PAYMENT_SUCCESS', (data: any) => {
+            console.log('Nhận thông báo thanh toán thành công:', data);
+            setVnpayUrl(null); // Đóng Modal
+            mutateTables();
+            if (selectedTableId) mutateActiveOrders();
+        });
+
+        return () => { 
+            socket.off('staff_notification'); 
+            socket.off('PAYMENT_SUCCESS');
+        };
     }, [socket, selectedTableId, mutateTables, mutateWaitingOrders, mutateActiveOrders]);
 
     // 6. Hành động
@@ -103,7 +115,7 @@ export const usePOS = () => {
             try {
                 const payRes = await api.post('/payment/vnpay/create-url', { invoiceId: result.invoiceId });
                 if (payRes.data.url) {
-                    window.open(payRes.data.url, '_blank');
+                    setVnpayUrl(payRes.data.url);
                 }
             } catch (error) {
                 console.error('Lỗi tạo thanh toán VNPay:', error);
@@ -150,6 +162,7 @@ export const usePOS = () => {
         selectedTableId, setSelectedTableId,
         unreadTables, setUnreadTables,
         selectedOrderIds, toggleOrderSelection,
+        vnpayUrl, setVnpayUrl,
         tables, isTablesLoading,
         activeOrders, isOrdersLoading,
         waitingOrders,

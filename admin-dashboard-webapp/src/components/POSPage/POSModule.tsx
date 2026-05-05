@@ -7,6 +7,7 @@ import OrderPanel from './parts/OrderPanel';
 import CheckoutPanel from './parts/CheckoutPanel';
 import OrderActions from './parts/OrderActions';
 import ChatPanel from './parts/ChatPanel';
+import VNPAYQRModal from './parts/VNPAYQRModal';
 import { LayoutGrid } from 'lucide-react';
 
 export default function POSModule() {
@@ -14,6 +15,7 @@ export default function POSModule() {
         selectedTableId, setSelectedTableId,
         unreadTables, setUnreadTables,
         selectedOrderIds, toggleOrderSelection,
+        vnpayUrl, setVnpayUrl,
         tables, isTablesLoading,
         activeOrders, isOrdersLoading,
         waitingOrders,
@@ -108,6 +110,15 @@ export default function POSModule() {
                     </div>
                 )}
             </div>
+
+            {/* Modal hiển thị mã QR VNPay */}
+            {vnpayUrl && (
+                <VNPAYQRModal 
+                    url={vnpayUrl} 
+                    onClose={() => setVnpayUrl(null)} 
+                    tableName={selectedTable?.name}
+                />
+            )}
         </div>
     );
 }
