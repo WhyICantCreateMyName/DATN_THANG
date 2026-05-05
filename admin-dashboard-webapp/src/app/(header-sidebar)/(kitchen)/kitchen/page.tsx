@@ -1,4 +1,4 @@
-import KitchenModule from '@/app/(header-sidebar)/(pos)/kitchen/KitchenModule';
+import KitchenModule from './KitchenModule';
 
 export default function KitchenPage() {
     return <KitchenModule />;
