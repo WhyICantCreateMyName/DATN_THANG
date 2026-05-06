@@ -36,8 +36,9 @@ export const menuService = {
     },
 
     // ---- Menu Items ----
-    getMenuItems: async (params?: { page?: number, limit?: number }): Promise<{ data: (MenuItem & { category: Category })[], meta: any }> => {
+    getMenuItems: async (params?: { page?: number, limit?: number, categoryId?: string | null }): Promise<{ data: (MenuItem & { category: Category })[], meta: any }> => {
         const queryParams = { ...params, limit: params?.limit || constants.PAGINATION.DEFAULT_LIMIT };
+        if (queryParams.categoryId === null) delete queryParams.categoryId;
         const res = await api.get('/menu-items', { params: queryParams });
         return res.data;
     },

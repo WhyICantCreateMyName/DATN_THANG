@@ -12,16 +12,19 @@ router.get('/menu-items', async (req: Request, res: Response) => {
         let page = parseInt(req.query.page as string) || 1;
         let limit = parseInt(req.query.limit as string) || 12;
         if (limit > 50) limit = 50;
-        
+
         const skip = (page - 1) * limit;
+        const categoryId = req.query.categoryId as string;
+        const where = categoryId ? { categoryId } : {};
 
         const [items, total] = await Promise.all([
             prisma.menuItem.findMany({
+                where,
                 skip,
                 take: limit,
                 include: { category: true }
             }),
-            prisma.menuItem.count()
+            prisma.menuItem.count({ where })
         ]);
 
         res.status(200).json({

@@ -8,23 +8,31 @@ export const useMenu = () => {
     const [itemPage, setItemPage] = useState(1);
 
     const { data: responseCats, mutate: mutateCats } = useSWR(['categories', catPage], () => menuService.getCategories({ page: catPage }));
-    const { data: responseItems, mutate: mutateItems } = useSWR(['menu_items', itemPage], () => menuService.getMenuItems({ page: itemPage }));
+    
+    // Server-side filtering by passing categoryId and including it in SWR key
+    const { data: responseItems, mutate: mutateItems } = useSWR(
+        ['menu_items', itemPage, selectedCategoryId], 
+        () => menuService.getMenuItems({ page: itemPage, categoryId: selectedCategoryId })
+    );
 
     const categories = responseCats?.data as Category[];
     const menuItems = responseItems?.data as (MenuItem & { category: Category })[];
 
-    const filteredItems = selectedCategoryId 
-        ? menuItems?.filter((item: any) => item.categoryId === selectedCategoryId) 
-        : menuItems;
+    // Reset item page when changing category
+    const handleSetCategory = (id: string | null) => {
+        setSelectedCategoryId(id);
+        setItemPage(1);
+    };
 
     return {
         categories,
         metaCats: responseCats?.meta,
-        menuItems: filteredItems,
+        menuItems,
         metaItems: responseItems?.meta,
         catPage, setCatPage,
         itemPage, setItemPage,
-        selectedCategoryId, setSelectedCategoryId,
+        selectedCategoryId, 
+        setSelectedCategoryId: handleSetCategory,
         mutateCats, mutateItems
     };
 };
