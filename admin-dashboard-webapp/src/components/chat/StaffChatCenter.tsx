@@ -38,10 +38,8 @@ export default function StaffChatCenter() {
     const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
     useEffect(() => {
-        // Khởi tạo audio
-        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'); // mượn tạm 1 link mp3 ting ting
+        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
-        // Fetch danh sách các phiên chat đang active
         const fetchSessions = async () => {
             try {
                 const res = await api.get('/chat-sessions/active');
@@ -55,17 +53,17 @@ export default function StaffChatCenter() {
         };
         fetchSessions();
 
-        // Socket logic
-        const newSocket = io(constants.url.api.baseUrl);
+        const newSocket = io(constants.url.api.production);
+        // const newSocket = io(constants.url.api.development);
+
         setSocket(newSocket);
         newSocket.emit('join_staff_room');
 
         newSocket.on('receive_message', (message: ChatMessage) => {
             setSessions(prev => prev.map(s => {
                 if (s.id === message.chatSessionId) {
-                    // Nếu là tin nhắn mới từ khách, kêu ting ting
                     if (message.senderType === 'CUSTOMER') {
-                        audioRef.current?.play().catch(() => {});
+                        audioRef.current?.play().catch(() => { });
                     }
                     return { ...s, messages: [...s.messages, message] };
                 }
@@ -73,11 +71,10 @@ export default function StaffChatCenter() {
             }));
         });
 
-        // Lắng nghe thông báo hệ thống (Dùng cho thông báo âm thanh toàn cục)
         newSocket.on('staff_notification', (data: any) => {
             if (data.type === 'CALL_STAFF' || data.type === 'NEW_MESSAGE') {
-                audioRef.current?.play().catch(() => {});
-                
+                audioRef.current?.play().catch(() => { });
+
                 if (data.type === 'CALL_STAFF') {
                     alert(`🚨 CẢNH BÁO: Bàn ${data.tableName} đang gọi nhân viên!`);
                 }
@@ -112,7 +109,6 @@ export default function StaffChatCenter() {
 
     return (
         <div className="flex h-[calc(100vh-200px)] bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
-            {/* Sidebar: Danh sách bàn đang chat */}
             <div className="w-80 border-r border-gray-100 flex flex-col">
                 <div className="p-6 border-b border-gray-50 bg-gray-50/50">
                     <h3 className="font-black text-gray-800 flex items-center gap-2">
@@ -150,11 +146,9 @@ export default function StaffChatCenter() {
                 </div>
             </div>
 
-            {/* Chat Area */}
             <div className="flex-1 flex flex-col bg-gray-50/30">
                 {selectedSession ? (
                     <>
-                        {/* Header */}
                         <div className="p-6 bg-white border-b border-gray-100 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
@@ -165,7 +159,6 @@ export default function StaffChatCenter() {
                             </span>
                         </div>
 
-                        {/* Messages */}
                         <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6">
                             {selectedSession.messages.map((msg, idx) => {
                                 const isStaff = msg.senderType === 'STAFF';
@@ -194,7 +187,6 @@ export default function StaffChatCenter() {
                             })}
                         </div>
 
-                        {/* Input */}
                         <div className="p-6 bg-white border-t border-gray-100 flex gap-4">
                             <input
                                 type="text"
