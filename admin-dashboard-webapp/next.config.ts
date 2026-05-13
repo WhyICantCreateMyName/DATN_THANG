@@ -9,7 +9,19 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  allowedDevOrigins: ['https://ql.nhahang.website']
+  // Allow Cloudflare Tunnel domain for HMR
+  allowedDevOrigins: ['ql.nhahang.website', 'https://ql.nhahang.website'],
+  
+  webpack: (config, { dev, isServer }) => {
+    // Optimization for HMR over tunnel/proxy
+    if (dev && !isServer) {
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

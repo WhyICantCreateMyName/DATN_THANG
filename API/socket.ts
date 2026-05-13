@@ -6,8 +6,13 @@ let io: Server | null = null;
 export const initSocket = (httpServer: HttpServer) => {
     io = new Server(httpServer, {
         cors: {
-            origin: "https://ql.nhahang.website",
-            methods: ["GET", "POST"]
+            origin: [
+                "https://ql.nhahang.website", 
+                "https://www.nhahang.website", 
+                "https://nhahang.website"
+            ],
+            methods: ["GET", "POST"],
+            credentials: true
         },
         transports: ['websocket', 'polling']
     });
