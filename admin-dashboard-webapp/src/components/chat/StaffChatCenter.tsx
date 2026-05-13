@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, User, Bell, Search, Hash } from 'lucide-react';
 import api from '@/services/axios';
 import constants from '@/constants';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useSocket } from '@/hooks/useSocket';
 
 interface ChatMessage {
     id: string;
@@ -31,12 +31,14 @@ export default function StaffChatCenter() {
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState('');
-    const [socket, setSocket] = useState<Socket | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
+    const socket = useSocket(); // Sử dụng socket chung của hệ thống để tránh xung đột
+
     const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
+    // 1. Fetch danh sách phiên chat
     useEffect(() => {
         audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
@@ -52,48 +54,57 @@ export default function StaffChatCenter() {
             }
         };
         fetchSessions();
+    }, []);
 
-        const newSocket = io(constants.url.api.production);
-        // const newSocket = io(constants.url.api.development);
+    // 2. Lắng nghe socket
+    useEffect(() => {
+        if (!socket) return;
 
-        setSocket(newSocket);
-        newSocket.emit('join_staff_room');
+        // Chỉ join room khi đã kết nối
+        socket.emit('join_staff_room');
 
-        newSocket.on('receive_message', (message: ChatMessage) => {
+        const handleReceiveMessage = (message: ChatMessage) => {
             setSessions(prev => prev.map(s => {
                 if (s.id === message.chatSessionId) {
                     if (message.senderType === 'CUSTOMER') {
                         audioRef.current?.play().catch(() => { });
                     }
+                    // Thêm tin nhắn nếu chưa tồn tại (chống trùng lặp do React StrictMode hoặc Socket)
+                    if (s.messages.some(m => m.id === message.id)) return s;
                     return { ...s, messages: [...s.messages, message] };
                 }
                 return s;
             }));
-        });
+        };
 
-        newSocket.on('staff_notification', (data: any) => {
-            if (data.type === 'CALL_STAFF' || data.type === 'NEW_MESSAGE') {
+        const handleStaffNotification = (data: any) => {
+            if (data.type === 'CALL_STAFF') {
                 audioRef.current?.play().catch(() => { });
-
-                if (data.type === 'CALL_STAFF') {
-                    alert(`🚨 CẢNH BÁO: Bàn ${data.tableName} đang gọi nhân viên!`);
-                }
+                alert(`🚨 CẢNH BÁO: Bàn ${data.tableName} đang gọi nhân viên!`);
             }
-        });
+            // NEW_MESSAGE đã được phát âm thanh ở NotificationContext rồi, nên ở đây không cần nữa để tránh kêu đúp
+        };
+
+        socket.on('receive_message', handleReceiveMessage);
+        socket.on('staff_notification', handleStaffNotification);
 
         return () => {
-            newSocket.disconnect();
+            socket.off('receive_message', handleReceiveMessage);
+            socket.off('staff_notification', handleStaffNotification);
+            // Không ngắt kết nối (disconnect) vì đây là socket dùng chung của toàn app
         };
-    }, []);
+    }, [socket]);
 
+    // Cuộn xuống tin nhắn mới nhất
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [selectedSession?.messages]);
 
-    const handleSendMessage = () => {
-        if (!inputValue.trim() || !socket || !selectedSessionId || !selectedSession) return;
+    // 3. Gửi tin nhắn qua REST API
+    const handleSendMessage = async () => {
+        if (!inputValue.trim() || !selectedSessionId || !selectedSession) return;
 
         const messageData = {
             chatSessionId: selectedSessionId,
@@ -103,8 +114,13 @@ export default function StaffChatCenter() {
             senderId: user.id
         };
 
-        socket.emit('send_message', messageData);
-        setInputValue('');
+        try {
+            await api.post('/chat/messages', messageData);
+            setInputValue('');
+        } catch (error) {
+            console.error('Lỗi gửi tin nhắn:', error);
+            alert('Gửi tin nhắn thất bại, vui lòng thử lại!');
+        }
     };
 
     return (

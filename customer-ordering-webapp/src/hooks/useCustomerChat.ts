@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
+import api from '@/services/axios';
 
 export interface Message {
   id: string;
@@ -47,9 +48,9 @@ export const useCustomerChat = (tableId: string, chatSessionId: string, initialM
 
     const handleMessage = (message: Message) => {
       setMessages((prev) => {
-          // Tránh trùng tin nhắn nếu fetch lại history cùng lúc
-          if (prev.some(m => m.id === message.id)) return prev;
-          return [...prev, message];
+        // Tránh trùng tin nhắn nếu fetch lại history cùng lúc
+        if (prev.some(m => m.id === message.id)) return prev;
+        return [...prev, message];
       });
     };
 
@@ -60,8 +61,8 @@ export const useCustomerChat = (tableId: string, chatSessionId: string, initialM
     };
   }, [socket, tableId]);
 
-  const sendMessage = useCallback((content: string) => {
-    if (!content.trim() || !socket || !chatSessionId) return;
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim() || !chatSessionId) return;
 
     const messageData = {
       chatSessionId,
@@ -71,8 +72,12 @@ export const useCustomerChat = (tableId: string, chatSessionId: string, initialM
       senderId: guestId
     };
 
-    socket.emit('send_message', messageData);
-  }, [socket, tableId, chatSessionId, guestId]);
+    try {
+      await api.post('/chat/messages', messageData);
+    } catch (error) {
+      console.error('Lỗi gửi tin nhắn:', error);
+    }
+  }, [tableId, chatSessionId, guestId]);
 
   const callStaff = useCallback((tableName: string) => {
     if (!socket || !chatSessionId) return;

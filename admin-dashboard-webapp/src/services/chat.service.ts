@@ -18,5 +18,9 @@ export const chatService = {
     getMessages: async (tableId: string): Promise<ChatHistoryResponse> => {
         const res = await api.get(`/chat/${tableId}/messages`);
         return res.data;
+    },
+    sendMessage: async (messageData: Omit<Message, 'id' | 'createdAt'>): Promise<Message> => {
+        const res = await api.post('/chat/messages', messageData);
+        return res.data;
     }
 };

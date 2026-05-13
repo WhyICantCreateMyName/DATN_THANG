@@ -39,20 +39,24 @@ export const useChat = (tableId: string | null, socket: Socket | null) => {
         };
     }, [socket, tableId, history?.sessionId]);
 
-    // 3. Hàm gửi tin nhắn (Thông qua Socket)
+    // 3. Hàm gửi tin nhắn (Thông qua REST API)
     const sendMessage = async (content: string, senderId: string) => {
-        if (!socket || !tableId || !history?.sessionId) return;
+        if (!tableId || !history?.sessionId) return;
 
         const messageData = {
             tableId,
             chatSessionId: history.sessionId,
             content,
-            senderType: 'STAFF',
+            senderType: 'STAFF' as const,
             senderId
         };
 
-        // Gửi qua socket
-        socket.emit('send_message', messageData);
+        // Gửi qua REST API thay vì Socket để đảm bảo an toàn
+        try {
+            await chatService.sendMessage(messageData); // Tạm giả định chatService có hàm này, nếu không ta dùng thẳng api.post
+        } catch (error) {
+            console.error('Lỗi gửi tin nhắn:', error);
+        }
     };
 
     return {
