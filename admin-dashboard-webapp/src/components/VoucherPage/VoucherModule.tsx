@@ -8,7 +8,7 @@ import Pagination from '@/components/ui/Pagination';
 import VoucherFormModal from './parts/VoucherFormModal';
 
 export default function VoucherModule() {
-    const { vouchers, meta, page, setPage, isLoading, mutateVouchers } = useVouchers();
+    const { vouchers, meta, page, setPage, keyword, setKeyword, isLoading, mutateVouchers } = useVouchers();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
 
@@ -39,23 +39,38 @@ export default function VoucherModule() {
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[calc(100vh-120px)] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <div className="flex items-center gap-4">
+            <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center bg-gray-50/50 gap-4">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
                     <div className="p-2 bg-indigo-100 rounded-xl">
                         <Ticket className="w-6 h-6 text-indigo-600" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800">Quản lý Voucher & Khuyến mãi</h2>
-                        <p className="text-sm text-gray-500 mt-0.5">Tạo và điều phối các chương trình ưu đãi khách hàng</p>
+                        <h2 className="text-xl font-bold text-gray-800">Quản lý Voucher</h2>
+                        <p className="text-sm text-gray-500 mt-0.5 whitespace-nowrap">Chương trình khuyến mãi</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => { setSelectedVoucher(null); setIsModalOpen(true); }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 active:scale-[0.98]"
-                >
-                    <Plus className="w-4 h-4" />
-                    Tạo Voucher Mới
-                </button>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    {/* Search Bar */}
+                    <div className="relative flex-1 sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Mã hoặc mô tả..."
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                        />
+                    </div>
+
+                    <button
+                        onClick={() => { setSelectedVoucher(null); setIsModalOpen(true); }}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 active:scale-[0.98] whitespace-nowrap"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Tạo Voucher Mới
+                    </button>
+                </div>
             </div>
 
             {/* List */}

@@ -47,7 +47,8 @@ router.patch('/order-items/:id/status', async (req: Request, res: Response) => {
 
         // Socket: Thông báo cho Thu ngân nếu món đã READY
         if (status === 'READY') {
-            const { io } = require('../index');
+            const { getIO } = require('../socket');
+            const io = getIO();
             if (io) {
                 const tableId = updatedItem.order.tableId;
                 const tableName = updatedItem.order.table.name;

@@ -12,11 +12,17 @@ router.get('/categories', async (req: Request, res: Response) => {
         let limit = parseInt(req.query.limit as string) || 12;
         if (limit > 50) limit = 50;
         
-        const skip = (page - 1) * limit;
+        const keyword = req.query.keyword as string;
+        const where: any = {};
+        if (keyword) {
+            where.name = { contains: keyword, mode: 'insensitive' };
+        }
 
+        const skip = (page - 1) * limit;
+        
         const [categories, total] = await Promise.all([
-            prisma.category.findMany({ skip, take: limit }),
-            prisma.category.count()
+            prisma.category.findMany({ where, skip, take: limit, orderBy: { name: 'asc' } }),
+            prisma.category.count({ where })
         ]);
 
         res.status(200).json({

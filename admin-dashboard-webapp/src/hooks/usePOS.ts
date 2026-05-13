@@ -6,9 +6,11 @@ import { useOrders } from '@/hooks/useOrders';
 import { useSocket } from '@/hooks/useSocket';
 import { orderService } from '@/services/order.service';
 import { tableService } from '@/services/table.service';
-import { reservationService } from '@/services/reservation.service';
+import { reservationService, Reservation } from '@/services/reservation.service';
+import { useOrderContext } from '@/contexts/OrderContext';
 
 export const usePOS = () => {
+    const { waitingOrders, mutateWaitingOrders } = useOrderContext();
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [unreadTables, setUnreadTables] = useState<string[]>([]);
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -31,9 +33,6 @@ export const usePOS = () => {
         mutate: mutateActiveOrders
     } = useOrders(selectedTableId ? { tableId: selectedTableId, onlyActive: true } : undefined);
 
-    // 3. Đơn hàng chờ duyệt
-    const { orders: waitingOrders, mutate: mutateWaitingOrders } = useOrders({ status: 'WAITING_APPROVAL' });
-
     // 4. Lịch hẹn đặt bàn
     const { data: reservations, mutate: mutateReservations } = useSWR(
         ['reservations'],
@@ -42,32 +41,16 @@ export const usePOS = () => {
     );
 
     const activeReservations = useMemo(() =>
-        reservations?.filter((r: any) => ['PENDING', 'CONFIRMED', 'ARRIVED'].includes(r.status)) || [],
+        (reservations?.data as Reservation[])?.filter((r: any) => ['PENDING', 'CONFIRMED', 'ARRIVED'].includes(r.status)) || [],
         [reservations]);
 
     const selectedTable = useMemo(() => tables?.find(t => t.id === selectedTableId), [tables, selectedTableId]);
-
-    // 4. Âm thanh thông báo
-    useEffect(() => {
-        if (!audioRef.current) return;
-        if (waitingOrders.length > 0) {
-            audioRef.current.loop = true;
-            audioRef.current.play().catch(() => { });
-        } else {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-        }
-    }, [waitingOrders]);
 
     // 5. Socket Logic
     useEffect(() => {
         if (!socket) return;
 
         socket.on('staff_notification', (data: any) => {
-            if (notificationAudioRef.current) {
-                notificationAudioRef.current.play().catch(() => { });
-            }
-
             if (data.type === 'NEW_MESSAGE' && data.tableId !== selectedTableId) {
                 setUnreadTables(prev => Array.from(new Set([...prev, data.tableId])));
             }

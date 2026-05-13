@@ -16,7 +16,8 @@ interface TableUI extends Table {
 
 export default function TableModule() {
     const { tables, meta, page, setPage, mutateTables } = useTable();
-    const { data: reservations } = useSWR<Reservation[]>('/reservations', () => reservationService.getReservations());
+    const { data: responseReservations } = useSWR('/reservations', () => reservationService.getReservations());
+    const reservations = responseReservations?.data as Reservation[];
     const [localTables, setLocalTables] = React.useState<TableUI[]>([]);
     const [selectedTableForReservations, setSelectedTableForReservations] = useState<Table | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -204,7 +205,7 @@ export default function TableModule() {
                             <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                 {!table.isEdit && !table.isCreate && (
                                     <>
-                                        <button 
+                                        <button
                                             onClick={() => setSelectedTableForReservations(table)}
                                             className="p-1.5 hover:bg-indigo-50 text-indigo-400 rounded-lg transition-colors relative"
                                             title="Xem lịch đặt bàn"
@@ -337,7 +338,7 @@ export default function TableModule() {
                                     <p className="text-xs text-gray-400 font-bold">Danh sách các yêu cầu đặt trước</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setSelectedTableForReservations(null)}
                                 className="w-10 h-10 rounded-xl hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors"
                             >
@@ -381,7 +382,7 @@ export default function TableModule() {
                             </div>
                         </div>
                         <div className="p-8 bg-gray-50 border-t border-gray-100">
-                            <button 
+                            <button
                                 onClick={() => setSelectedTableForReservations(null)}
                                 className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all"
                             >

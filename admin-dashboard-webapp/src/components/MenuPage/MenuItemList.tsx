@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, UtensilsCrossed, Check, X, Image as ImageIcon, FlaskConical } from 'lucide-react';
+import { Plus, Edit2, Trash2, UtensilsCrossed, Check, X, Image as ImageIcon, FlaskConical, Search } from 'lucide-react';
 import { menuService, Category, MenuItem } from '@/services/menu.service';
 import RecipeModal from './parts/RecipeModal';
 
@@ -18,6 +18,8 @@ interface MenuItemListProps {
     itemPage: number;
     setItemPage: React.Dispatch<React.SetStateAction<number>>;
     metaItems: any;
+    keyword: string;
+    setKeyword: (val: string) => void;
 }
 
 export default function MenuItemList({
@@ -27,7 +29,9 @@ export default function MenuItemList({
     mutateItems,
     itemPage,
     setItemPage,
-    metaItems
+    metaItems,
+    keyword,
+    setKeyword
 }: MenuItemListProps) {
     const [localItems, setLocalItems] = useState<MenuItemUI[]>([]);
     const [isSaving, setIsSaving] = useState(false);
@@ -154,19 +158,33 @@ export default function MenuItemList({
 
     return (
         <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-full">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h2 className="font-bold text-gray-800 flex items-center gap-2">
+            <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center bg-gray-50/50 gap-4">
+                <h2 className="font-bold text-gray-800 flex items-center gap-2 flex-shrink-0">
                     <UtensilsCrossed className="w-5 h-5 text-purple-500" />
                     Danh sách món ăn
                 </h2>
-                <button
-                    onClick={handleAddItem}
-                    disabled={isCreatingItem}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                    <Plus className="w-4 h-4" />
-                    Thêm Món Mới
-                </button>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Tìm tên món ăn..."
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleAddItem}
+                        disabled={isCreatingItem}
+                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Thêm Món Mới
+                    </button>
+                </div>
             </div>
             <div className="flex-1 overflow-y-auto p-5 bg-gray-50/30">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

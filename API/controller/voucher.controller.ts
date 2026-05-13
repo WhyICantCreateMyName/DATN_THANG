@@ -11,15 +11,24 @@ router.get('/vouchers', async (req: Request, res: Response) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
+        const keyword = req.query.keyword as string;
+        const where: any = {};
+        if (keyword) {
+            where.OR = [
+                { code: { contains: keyword, mode: 'insensitive' } },
+                { description: { contains: keyword, mode: 'insensitive' } }
+            ];
+        }
         const skip = (page - 1) * limit;
 
         const [vouchers, total] = await Promise.all([
             prisma.voucher.findMany({
+                where,
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' }
             }),
-            prisma.voucher.count()
+            prisma.voucher.count({ where })
         ]);
 
         res.status(200).json({
@@ -94,7 +103,7 @@ router.put('/vouchers/:id', async (req: Request, res: Response) => {
         if (conditions !== undefined) updateData.conditions = conditions;
 
         const voucher = await prisma.voucher.update({
-            where: { id: req.params.id },
+            where: { id: String(req.params.id) },
             data: updateData
         });
         res.status(200).json(voucher);
@@ -107,7 +116,7 @@ router.put('/vouchers/:id', async (req: Request, res: Response) => {
 // Xóa voucher
 router.delete('/vouchers/:id', async (req: Request, res: Response) => {
     try {
-        await prisma.voucher.delete({ where: { id: req.params.id } });
+        await prisma.voucher.delete({ where: { id: String(req.params.id) } });
         res.status(204).send();
     } catch (error) {
         res.status(500).json({ error: 'Lỗi xóa voucher' });
@@ -221,7 +230,7 @@ router.post('/vouchers/validate', async (req: Request, res: Response) => {
                     if (!customerInfo?.phone) return res.status(400).json({ error: 'Voucher này chỉ dành cho khách hàng mới' });
 
                     const previousInvoices = await prisma.reservation.count({
-                        where: { phone: customerInfo.phone, status: 'COMPLETED' }
+                        where: { customerPhone: customerInfo.phone, status: 'COMPLETED' }
                     });
 
                     if (previousInvoices > 0) return res.status(400).json({ error: 'Voucher này chỉ dành cho khách hàng mới' });
@@ -232,7 +241,7 @@ router.post('/vouchers/validate', async (req: Request, res: Response) => {
                     if (!customerInfo?.phone) return res.status(400).json({ error: 'Bạn cần nhập số điện thoại để áp dụng voucher này' });
 
                     const orderCount = await prisma.reservation.count({
-                        where: { phone: customerInfo.phone, status: 'COMPLETED' }
+                        where: { customerPhone: customerInfo.phone, status: 'COMPLETED' }
                     });
 
                     if (orderCount < cond.value) {

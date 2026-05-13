@@ -50,7 +50,7 @@ export default function ChatWidget({ tableId, tableName, chatSessionId, initialM
   };
 
   return (
-    <div className="fixed bottom-24 right-6 z-[100]">
+    <div className="fixed bottom-24 right-6 z-[50]">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -90,23 +90,23 @@ export default function ChatWidget({ tableId, tableName, chatSessionId, initialM
                   const isSystem = msg.senderId === 'SYSTEM';
 
                   if (isSystem) {
+                    return (
+                      <div key={msg.id} className="flex justify-center">
+                        <span className="text-[10px] bg-gray-200 text-gray-500 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                          {msg.content}
+                        </span>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div key={msg.id} className="flex justify-center">
-                      <span className="text-[10px] bg-gray-200 text-gray-500 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] p-4 rounded-2xl text-sm font-medium ${isMe ? 'bg-amber-500 text-white rounded-br-none' : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-none'}`}>
                         {msg.content}
-                      </span>
+                      </div>
                     </div>
                   );
-                }
-
-                return (
-                  <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] p-4 rounded-2xl text-sm font-medium ${isMe ? 'bg-amber-500 text-white rounded-br-none' : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-none'}`}>
-                      {msg.content}
-                    </div>
-                  </div>
-                );
-              })}
+                })}
             </div>
 
             {/* Actions */}

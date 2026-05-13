@@ -12,15 +12,21 @@ router.get('/ingredients', async (req: Request, res: Response) => {
     try {
         let page = parseInt(req.query.page as string) || 1;
         let limit = parseInt(req.query.limit as string) || 10;
+        const keyword = req.query.keyword as string;
+        const where: any = {};
+        if (keyword) {
+            where.name = { contains: keyword, mode: 'insensitive' };
+        }
         const skip = (page - 1) * limit;
 
         const [ingredients, total] = await Promise.all([
             prisma.ingredient.findMany({
+                where,
                 skip,
                 take: limit,
                 orderBy: { name: 'asc' }
             }),
-            prisma.ingredient.count()
+            prisma.ingredient.count({ where })
         ]);
 
         res.status(200).json({
@@ -169,15 +175,24 @@ router.get('/suppliers', async (req: Request, res: Response) => {
     try {
         let page = parseInt(req.query.page as string) || 1;
         let limit = parseInt(req.query.limit as string) || 10;
+        const keyword = req.query.keyword as string;
+        const where: any = {};
+        if (keyword) {
+            where.OR = [
+                { name: { contains: keyword, mode: 'insensitive' } },
+                { contact: { contains: keyword, mode: 'insensitive' } }
+            ];
+        }
         const skip = (page - 1) * limit;
 
         const [suppliers, total] = await Promise.all([
             prisma.supplier.findMany({
+                where,
                 skip,
                 take: limit,
                 orderBy: { name: 'asc' }
             }),
-            prisma.supplier.count()
+            prisma.supplier.count({ where })
         ]);
 
         res.status(200).json({

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Tag, Check, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Tag, Check, X, Search } from 'lucide-react';
 import { menuService, Category } from '@/services/menu.service';
 
 interface CategoryUI extends Category {
@@ -16,6 +16,8 @@ interface CategorySidebarProps {
     mutateCats: () => Promise<any>;
     catPage: number;
     setCatPage: React.Dispatch<React.SetStateAction<number>>;
+    catKeyword: string;
+    setCatKeyword: (val: string) => void;
     metaCats: any;
 }
 
@@ -26,12 +28,15 @@ export default function CategorySidebar({
     mutateCats,
     catPage,
     setCatPage,
+    catKeyword,
+    setCatKeyword,
     metaCats
 }: CategorySidebarProps) {
     const [localCats, setLocalCats] = useState<CategoryUI[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [isCreatingCat, setIsCreatingCat] = useState(false);
     const [editingCatId, setEditingCatId] = useState<string | null>(null);
+    const [isSearchVisible, setIsSearchVisible] = useState(false);
 
     // Sync Categories
     useEffect(() => {
@@ -91,18 +96,45 @@ export default function CategorySidebar({
 
     return (
         <div className="md:w-1/4 lg:w-1/5 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-full">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h2 className="font-bold text-gray-800 flex items-center gap-2">
-                    <Tag className="w-5 h-5 text-blue-500" />
-                    Danh mục
-                </h2>
-                <button
-                    onClick={handleAddCat}
-                    disabled={isSaving || isCreatingCat}
-                    className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors disabled:opacity-50"
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
+            <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex justify-between items-center mb-3">
+                    <h2 className="font-bold text-gray-800 flex items-center gap-2">
+                        <Tag className="w-5 h-5 text-blue-500" />
+                        Danh mục
+                    </h2>
+                    <div className="flex gap-1">
+                        <button
+                            onClick={() => setIsSearchVisible(!isSearchVisible)}
+                            className={`p-1.5 rounded-lg transition-colors ${isSearchVisible ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                        >
+                            <Search className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={handleAddCat}
+                            disabled={isSaving || isCreatingCat}
+                            className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                {isSearchVisible && (
+                    <div className="relative animate-in slide-in-from-top-1 duration-200">
+                        <input
+                            type="text"
+                            placeholder="Tìm danh mục..."
+                            value={catKeyword}
+                            onChange={(e) => setCatKeyword(e.target.value)}
+                            className="w-full pl-3 pr-8 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        />
+                        {catKeyword && (
+                            <button onClick={() => setCatKeyword('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-1">
                 <button

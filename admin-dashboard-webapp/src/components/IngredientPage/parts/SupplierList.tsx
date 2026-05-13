@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Check, X, Building2, Phone, MapPin } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, X, Building2, Phone, MapPin, Search } from 'lucide-react';
 import { Supplier, ingredientService } from '@/services/ingredient.service';
 import Pagination from '@/components/ui/Pagination';
 
@@ -14,9 +14,11 @@ interface SupplierListProps {
     page: number;
     meta: any;
     onPageChange: (page: number) => void;
+    keyword: string;
+    setKeyword: (val: string) => void;
 }
 
-export default function SupplierList({ suppliers, mutateSuppliers, page, meta, onPageChange }: SupplierListProps) {
+export default function SupplierList({ suppliers, mutateSuppliers, page, meta, onPageChange, keyword, setKeyword }: SupplierListProps) {
     const [localSuppliers, setLocalSuppliers] = useState<SupplierUI[]>([]);
     const [isCreating, setIsCreating] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -96,19 +98,34 @@ export default function SupplierList({ suppliers, mutateSuppliers, page, meta, o
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center px-2">
+            <div className="flex flex-col sm:flex-row justify-between items-center px-2 gap-4">
                 <div>
                     <h3 className="text-lg font-bold text-gray-800">Danh sách Nhà Cung Cấp</h3>
-                    <p className="text-xs text-gray-500">Quản lý thông tin đối tác cung ứng</p>
+                    <p className="text-xs text-gray-500">Đối tác cung ứng</p>
                 </div>
-                <button 
-                    onClick={handleAdd}
-                    disabled={isCreating}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50"
-                >
-                    <Plus className="w-4 h-4" />
-                    Thêm Nhà Cung Cấp
-                </button>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    {/* Search Bar */}
+                    <div className="relative flex-1 sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Tìm tên hoặc SĐT..."
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleAdd}
+                        disabled={isCreating}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 whitespace-nowrap"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Thêm Nhà Cung Cấp
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
@@ -131,7 +148,7 @@ export default function SupplierList({ suppliers, mutateSuppliers, page, meta, o
                                         {isEditing ? (
                                             <>
                                                 <td className="px-6 py-4">
-                                                    <input 
+                                                    <input
                                                         autoFocus
                                                         placeholder="Tên nhà cung cấp..."
                                                         className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -140,7 +157,7 @@ export default function SupplierList({ suppliers, mutateSuppliers, page, meta, o
                                                     />
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <input 
+                                                    <input
                                                         placeholder="Số điện thoại / Email..."
                                                         className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={sup.contact || ''}
@@ -148,7 +165,7 @@ export default function SupplierList({ suppliers, mutateSuppliers, page, meta, o
                                                     />
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <input 
+                                                    <input
                                                         placeholder="Địa chỉ văn phòng..."
                                                         className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={sup.address || ''}
@@ -222,10 +239,10 @@ export default function SupplierList({ suppliers, mutateSuppliers, page, meta, o
                     </table>
                 </div>
 
-                <Pagination 
-                    page={page} 
-                    totalPages={meta?.totalPages || 0} 
-                    onPageChange={onPageChange} 
+                <Pagination
+                    page={page}
+                    totalPages={meta?.totalPages || 0}
+                    onPageChange={onPageChange}
                     totalItems={meta?.total}
                 />
             </div>

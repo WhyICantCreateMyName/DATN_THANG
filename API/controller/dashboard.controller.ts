@@ -35,7 +35,7 @@ router.get('/dashboard/stats', async (req: Request, res: Response) => {
                 },
                 select: { finalAmount: true }
             });
-            
+
             const amount = dayInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0);
             last7DaysRevenue.push({
                 name: format(date, 'dd/MM'),
@@ -75,7 +75,7 @@ router.get('/dashboard/stats', async (req: Request, res: Response) => {
         const [totalTables, occupiedTables, totalStaffs, totalOrdersToday] = await Promise.all([
             prisma.table.count(),
             prisma.table.count({ where: { status: 'OCCUPIED' } }),
-            prisma.user.count({ where: { role: { in: ['STAFF', 'CHEF'] }, isActive: true } }),
+            prisma.user.count({ where: { role: { in: ['KITCHEN', 'CASHIER'] }, isActive: true } }),
             prisma.order.count({ where: { createdAt: { gte: todayStart, lte: todayEnd } } })
         ]);
 

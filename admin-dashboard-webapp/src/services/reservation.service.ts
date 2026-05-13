@@ -14,8 +14,8 @@ export interface Reservation {
 }
 
 export const reservationService = {
-    getReservations: async () => {
-        const response = await api.get('/reservations');
+    getReservations: async (params?: { page?: number, limit?: number, keyword?: string }) => {
+        const response = await api.get('/reservations', { params });
         return response.data;
     },
     updateStatus: async (id: string, status: string, tableId?: string, extraData?: any) => {

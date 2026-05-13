@@ -21,8 +21,8 @@ export interface Voucher {
 }
 
 export const voucherService = {
-    getVouchers: (page = 1, limit = constants.PAGINATION.DEFAULT_LIMIT) => 
-        axios.get(`${API_URL}/vouchers?page=${page}&limit=${limit}`).then(res => res.data),
+    getVouchers: (page = 1, limit = constants.PAGINATION.DEFAULT_LIMIT, keyword = '') => 
+        axios.get(`${API_URL}/vouchers?page=${page}&limit=${limit}${keyword ? `&keyword=${keyword}` : ''}`).then(res => res.data),
     
     createVoucher: (data: any) => 
         axios.post(`${API_URL}/vouchers`, data).then(res => res.data),

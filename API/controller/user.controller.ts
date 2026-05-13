@@ -13,16 +13,27 @@ router.get('/users', verifyToken, requireRole(['ADMIN']), async (req: Request, r
         let limit = parseInt(req.query.limit as string) || 12;
         if (limit > 50) limit = 50;
         
+        const keyword = req.query.keyword as string;
+        
+        const where: any = {};
+        if (keyword) {
+            where.OR = [
+                { fullName: { contains: keyword, mode: 'insensitive' } },
+                { username: { contains: keyword, mode: 'insensitive' } }
+            ];
+        }
+
         const skip = (page - 1) * limit;
 
         const [users, total] = await Promise.all([
             prisma.user.findMany({
+                where,
                 skip,
                 take: limit,
                 select: { id: true, username: true, fullName: true, role: true, isActive: true, createdAt: true },
                 orderBy: { createdAt: 'desc' }
             }),
-            prisma.user.count()
+            prisma.user.count({ where })
         ]);
 
         res.status(200).json({

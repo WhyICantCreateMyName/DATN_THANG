@@ -15,14 +15,24 @@ router.get('/menu-items', async (req: Request, res: Response) => {
 
         const skip = (page - 1) * limit;
         const categoryId = req.query.categoryId as string;
-        const where = categoryId ? { categoryId } : {};
+        const keyword = req.query.keyword as string;
+
+        const where: any = {};
+        if (categoryId) where.categoryId = categoryId;
+        if (keyword) {
+            where.OR = [
+                { name: { contains: keyword, mode: 'insensitive' } },
+                { description: { contains: keyword, mode: 'insensitive' } }
+            ];
+        }
 
         const [items, total] = await Promise.all([
             prisma.menuItem.findMany({
                 where,
                 skip,
                 take: limit,
-                include: { category: true }
+                include: { category: true },
+                orderBy: { name: 'asc' }
             }),
             prisma.menuItem.count({ where })
         ]);

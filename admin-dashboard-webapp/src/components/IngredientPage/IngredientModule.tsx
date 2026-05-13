@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { LayoutGrid, History, Package, Truck } from 'lucide-react';
+import { LayoutGrid, History, Package, Truck, Search } from 'lucide-react';
 import { useIngredients, useStockTransactions } from '@/hooks/useIngredients';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { ingredientService, Ingredient } from '@/services/ingredient.service';
@@ -15,9 +15,9 @@ export default function IngredientModule() {
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null);
 
-    const { ingredients, meta: ingMeta, page: ingPage, setPage: setIngPage, isLoading: isIngLoading, mutateIngredients } = useIngredients();
+    const { ingredients, meta: ingMeta, page: ingPage, setPage: setIngPage, keyword: ingKeyword, setKeyword: setIngKeyword, isLoading: isIngLoading, mutateIngredients } = useIngredients();
     const { transactions, meta: trMeta, page: trPage, setPage: setTrPage, isLoading: isTrLoading, mutateTransactions } = useStockTransactions();
-    const { suppliers, meta: supMeta, page: supPage, setPage: setSupPage, isLoading: isSupLoading, mutateSuppliers } = useSuppliers();
+    const { suppliers, meta: supMeta, page: supPage, setPage: setSupPage, keyword: supKeyword, setKeyword: setSupKeyword, isLoading: isSupLoading, mutateSuppliers } = useSuppliers();
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[calc(100vh-120px)] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -77,6 +77,8 @@ export default function IngredientModule() {
                         page={ingPage}
                         meta={ingMeta}
                         onPageChange={setIngPage}
+                        keyword={ingKeyword}
+                        setKeyword={setIngKeyword}
                     />
                 ) : activeTab === 'suppliers' ? (
                     <SupplierList
@@ -85,6 +87,8 @@ export default function IngredientModule() {
                         page={supPage}
                         meta={supMeta}
                         onPageChange={setSupPage}
+                        keyword={supKeyword}
+                        setKeyword={setSupKeyword}
                     />
                 ) : (
                     <TransactionHistory 

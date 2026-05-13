@@ -9,9 +9,7 @@ export const useSocket = () => {
 
     useEffect(() => {
         if (!socketInstance) {
-            const socketUrl = constants.url.api.baseUrl.includes('localhost') 
-                ? 'http://localhost:4000' 
-                : 'http://192.168.0.102:4000';
+            const socketUrl = constants.url.api.baseUrl;
 
             socketInstance = io(socketUrl, {
                 transports: ['websocket'],

@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import moment from 'moment';
 import qs from 'qs';
-import { io } from '../index';
+import { getIO } from '../socket';
 import { createVNPayUrl, verifyVNPayReturn } from '../utils/vnpay';
 
 const router = Router();
@@ -120,6 +120,7 @@ router.get('/payment/vnpay/callback', async (req: Request, res: Response) => {
             });
 
             // Bắn Socket báo cho Admin POS đóng mã QR
+            const io = getIO();
             if (io) {
                 io.to(`table_${invoice.tableId}`).emit('PAYMENT_SUCCESS', { invoiceId });
                 io.emit('staff_notification', { type: 'TABLE_UPDATED' });

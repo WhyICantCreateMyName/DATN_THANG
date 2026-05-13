@@ -11,7 +11,7 @@ export interface User {
 }
 
 export const staffService = {
-    getStaffs: async (params?: { page?: number, limit?: number }): Promise<{ data: User[], meta: any }> => {
+    getStaffs: async (params?: { page?: number, limit?: number, keyword?: string }): Promise<{ data: User[], meta: any }> => {
         const queryParams = { ...params, limit: params?.limit || constants.PAGINATION.DEFAULT_LIMIT };
         const res = await api.get('/users', { params: queryParams });
         return res.data;

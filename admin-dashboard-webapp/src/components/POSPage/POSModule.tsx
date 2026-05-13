@@ -42,7 +42,6 @@ export default function POSModule() {
     return (
         <div className="flex h-[calc(100vh-160px)] gap-6 overflow-hidden">
             <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto" />
-            <audio ref={notificationAudioRef} src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto" />
 
             {/* PHẦN 1: SƠ ĐỒ BÀN (30% chiều rộng) */}
             <div className="w-[30%] min-w-[320px]">

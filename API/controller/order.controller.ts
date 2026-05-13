@@ -212,7 +212,8 @@ router.post('/orders', async (req: Request, res: Response) => {
 
         // 5. Gửi thông báo tự động vào Chat (nếu có phiên chat)
         if (activeSession) {
-            const { io } = require('../index'); // Require io từ index để emit
+            const { getIO } = require('../socket'); 
+            const io = getIO();
 
             const systemMsg = await prisma.message.create({
                 data: {
@@ -338,7 +339,8 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
         res.status(200).json(updatedOrder);
 
         // Phát tín hiệu Socket
-        const { io } = require('../index');
+        const { getIO } = require('../socket');
+        const io = getIO();
         if (io) {
             // Gửi cho khách hàng tại bàn đó
             io.to(`table_${updatedOrder.tableId}`).emit('ORDER_STATUS_UPDATED', {
@@ -394,7 +396,8 @@ router.post('/orders/move', async (req: Request, res: Response) => {
             return updatedOrder;
         });
 
-        const { io } = require('../index');
+        const { getIO } = require('../socket');
+        const io = getIO();
         if (io) io.emit('staff_notification', { type: 'TABLE_UPDATED' });
 
         res.status(200).json(result);

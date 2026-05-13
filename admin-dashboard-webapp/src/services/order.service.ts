@@ -20,6 +20,9 @@ export interface Order {
     items: OrderItem[];
     createdAt: string;
     tableId: string;
+    table?: {
+        name: string;
+    };
 }
 
 export const orderService = {

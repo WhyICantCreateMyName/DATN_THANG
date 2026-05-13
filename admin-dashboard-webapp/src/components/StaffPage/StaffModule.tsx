@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, ShieldAlert, CheckCircle2, XCircle, Check, X, Key } from 'lucide-react';
+import { Plus, Trash2, Edit2, ShieldAlert, CheckCircle2, XCircle, Check, X, Key, Search } from 'lucide-react';
 import { useStaff } from '@/hooks/useStaff';
 import { staffService, User } from '@/services/staff.service';
 import Pagination from '@/components/ui/Pagination';
@@ -14,7 +14,7 @@ interface UserUI extends User {
 }
 
 export default function StaffModule() {
-    const { staffs, meta, page, setPage, mutateStaffs } = useStaff();
+    const { staffs, meta, page, setPage, keyword, setKeyword, mutateStaffs } = useStaff();
 
     const [localStaffs, setLocalStaffs] = useState<UserUI[]>([]);
     const [isCreating, setIsCreating] = useState(false);
@@ -112,26 +112,41 @@ export default function StaffModule() {
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[calc(100vh-120px)] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <div className="flex items-center gap-4">
+            <div className="p-6 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-center bg-gray-50/50 gap-4">
+                <div className="flex items-center gap-4 w-full lg:w-auto">
                     <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
                         <ShieldAlert className="w-6 h-6 text-indigo-600" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 tracking-tight">
-                            Quản lý Nhân Sự & Phân Quyền
+                        <h2 className="text-xl font-bold text-gray-800 tracking-tight whitespace-nowrap">
+                            Quản lý Nhân Sự
                         </h2>
-                        <p className="text-sm text-gray-500 font-medium">Quản trị danh sách tài khoản, vai trò và trạng thái nhân viên</p>
+                        <p className="text-sm text-gray-500 font-medium whitespace-nowrap">Tài khoản và phân quyền</p>
                     </div>
                 </div>
-                <button
-                    onClick={handleAddStaff}
-                    disabled={isCreating}
-                    className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/30 transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                    <Plus className="w-4 h-4" />
-                    Thêm Nhân Sự
-                </button>
+
+                <div className="flex items-center gap-3 w-full lg:w-auto">
+                    {/* Search Bar */}
+                    <div className="relative flex-1 lg:w-80">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Tìm tên hoặc username..."
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleAddStaff}
+                        disabled={isCreating}
+                        className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/30 transition-all flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Thêm Nhân Sự
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-x-auto p-6 bg-white">

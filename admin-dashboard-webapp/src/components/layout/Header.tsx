@@ -1,15 +1,19 @@
 'use client';
 
-import React from 'react';
-import { Search, Bell, ChevronDown, UserCircle, LogOut } from 'lucide-react';
+import { Search, Bell, ChevronDown, UserCircle, LogOut, LayoutGrid, Clock } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
+import { useOrderContext } from '@/contexts/OrderContext';
+import Link from 'next/link';
+import { useState } from 'react';
 
 export default function Header() {
     const { user, logout } = useAuthContext();
+    const { waitingOrders } = useOrderContext();
+    const [isOpen, setIsOpen] = useState(false);
 
     return (
         <header className="h-20 bg-white border-b border-gray-100 shadow-sm flex items-center justify-between px-8 ml-64 sticky top-0 z-40 transition-all">
-            
+
             {/* Left: Global Searchbar */}
             <div className="flex-1 flex max-w-xl">
                 <div className="relative w-full group">
@@ -26,12 +30,77 @@ export default function Header() {
 
             {/* Right: Notifications & User Profile */}
             <div className="flex items-center gap-6">
-                
-                {/* Notification Bell */}
-                <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 rounded-full">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                </button>
+
+                {/* Order Notification Bell */}
+                <div className="relative">
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className={`relative p-2.5 transition-all rounded-2xl flex items-center gap-2 ${waitingOrders.length > 0
+                                ? 'bg-red-50 text-red-600 ring-2 ring-red-100 animate-pulse'
+                                : 'text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100'
+                            }`}
+                    >
+                        <Bell className={`w-5 h-5 ${waitingOrders.length > 0 ? 'fill-current' : ''}`} />
+                        {waitingOrders.length > 0 && (
+                            <div className="flex flex-col items-start leading-none pr-1">
+                                <span className="text-[10px] font-black uppercase tracking-tighter">Cần duyệt</span>
+                                <span className="text-sm font-black">{waitingOrders.length}</span>
+                            </div>
+                        )}
+                    </button>
+
+                    {/* Dropdown danh sách đơn hàng chờ */}
+                    {isOpen && (
+                        <div className="absolute right-0 mt-3 w-80 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
+                                <h3 className="font-bold text-gray-800 text-xs uppercase tracking-tight">Đơn hàng chờ duyệt</h3>
+                                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-black rounded-full">{waitingOrders.length} ĐƠN</span>
+                            </div>
+
+                            <div className="max-h-[320px] overflow-y-auto">
+                                {waitingOrders.length === 0 ? (
+                                    <div className="p-10 text-center text-gray-400">
+                                        <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                            <Bell className="w-6 h-6 opacity-20" />
+                                        </div>
+                                        <p className="text-xs font-bold uppercase tracking-widest opacity-40">Tất cả đã xử lý xong</p>
+                                    </div>
+                                ) : (
+                                    waitingOrders.map((order) => (
+                                        <div key={order.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors flex items-center justify-between group">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center font-black text-sm">
+                                                    {order.table?.name?.match(/\d+/)?.[0] || 'A'}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-gray-900">Bàn {order.table?.name || '...'}</p>
+                                                    <p className="text-[10px] text-gray-500 font-medium">{new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} • {order.items?.length || 0} món</p>
+                                                </div>
+                                            </div>
+                                            <Link
+                                                href="/pos"
+                                                onClick={() => setIsOpen(false)}
+                                                className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-1 hover:gap-2 transition-all opacity-0 group-hover:opacity-100"
+                                            >
+                                                Đến ngay <ChevronDown className="w-3 h-3 -rotate-90" />
+                                            </Link>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {waitingOrders.length > 0 && (
+                                <Link
+                                    href="/pos"
+                                    onClick={() => setIsOpen(false)}
+                                    className="block p-3 text-center bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 transition-all border-t border-gray-100"
+                                >
+                                    Xem toàn bộ trong POS
+                                </Link>
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 <div className="w-px h-8 bg-gray-200"></div>
 
@@ -50,7 +119,7 @@ export default function Header() {
                         <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
                     </div>
 
-                    {/* Dropdown Menu (Hiển thị khi hover) */}
+                    {/* Dropdown Menu */}
                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg shadow-gray-200/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
                         <div className="py-2">
                             <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors">
@@ -58,7 +127,7 @@ export default function Header() {
                                 Hồ sơ cá nhân
                             </button>
                             <div className="my-1 border-t border-gray-100"></div>
-                            <button 
+                            <button
                                 onClick={logout}
                                 className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                             >

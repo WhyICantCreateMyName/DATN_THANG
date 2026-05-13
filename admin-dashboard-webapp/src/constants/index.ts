@@ -21,7 +21,8 @@ export default {
         KITCHEN: '/kitchen',
         INGREDIENTS: '/ingredients',
         VOUCHERS: '/vouchers',
-        RESERVATIONS: '/reservations'
+        RESERVATIONS: '/reservations',
+        REPORTS: '/reports'
     },
     PAGINATION: {
         DEFAULT_LIMIT: 12,

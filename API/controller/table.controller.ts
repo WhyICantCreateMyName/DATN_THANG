@@ -235,7 +235,8 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
 
         res.status(200).json(result);
 
-        const { io } = require('../index');
+        const { getIO } = require('../socket');
+        const io = getIO();
         if (io) {
             if (result.isFullyPaid) {
                 io.to(`table_${id}`).emit('SESSION_ENDED');
@@ -300,7 +301,8 @@ router.post('/tables/merge', async (req: Request, res: Response) => {
             return { message: 'Gộp bàn thành công', targetTableId };
         });
 
-        const { io } = require('../index');
+        const { getIO } = require('../socket');
+        const io = getIO();
         if (io) io.emit('staff_notification', { type: 'TABLE_UPDATED' });
 
         res.status(200).json(result);

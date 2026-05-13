@@ -24,16 +24,14 @@ import customerRoutes from './controller/customer.controller';
 import dashboardRoutes from './controller/dashboard.controller';
 import reservationRoutes from './controller/reservation.controller';
 import paymentRoutes from './controller/payment.controller';
+import invoiceRoutes from './controller/invoice.controller';
 import { initMinio } from './utils/minio';
+
+import { initSocket } from './socket';
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-    cors: {
-        origin: true,
-        credentials: true
-    }
-});
+const io = initSocket(httpServer);
 const prisma = new PrismaClient();
 const PORT = Number(process.env.PORT) || 4000;
 
@@ -59,6 +57,7 @@ app.use('/', chatRoutes);
 app.use('/', orderItemRoutes);
 app.use('/', ingredientRoutes);
 app.use('/', recipeRoutes);
+app.use('/', invoiceRoutes);
 app.use('/', paymentRoutes);
 app.use('/', voucherRoutes);
 app.use('/', customerRoutes);
@@ -153,7 +152,7 @@ io.on('connection', (socket) => {
     });
 });
 
-export { io };
+
 
 app.get('/health', async (req, res) => {
     try {

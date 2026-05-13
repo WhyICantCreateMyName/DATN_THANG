@@ -8,23 +8,6 @@ import {
 import { TrendingUp, Users, CalendarCheck, Percent, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 
-const dummyRevenueData = [
-    { name: 'T2', amount: 4500000 },
-    { name: 'T3', amount: 5200000 },
-    { name: 'T4', amount: 4800000 },
-    { name: 'T5', amount: 6100000 },
-    { name: 'T6', amount: 8900000 },
-    { name: 'T7', amount: 12500000 },
-    { name: 'CN', amount: 14200000 },
-];
-
-const dummyPopularItems = [
-    { name: 'Beefsteak', orders: 145 },
-    { name: 'Mì Ý Hải Sản', orders: 112 },
-    { name: 'Trà đào', orders: 204 },
-    { name: 'Cơm chiên', orders: 89 },
-];
-
 export default function DashboardModule() {
     const {
         todayRevenue,

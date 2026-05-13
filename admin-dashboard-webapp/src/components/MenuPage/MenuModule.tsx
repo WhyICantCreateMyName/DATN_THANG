@@ -12,6 +12,8 @@ export default function MenuModule() {
         catPage, setCatPage,
         itemPage, setItemPage,
         selectedCategoryId, setSelectedCategoryId,
+        keyword, setKeyword,
+        catKeyword, setCatKeyword,
         mutateCats, mutateItems
     } = useMenu();
 
@@ -24,6 +26,8 @@ export default function MenuModule() {
                 mutateCats={mutateCats}
                 catPage={catPage}
                 setCatPage={setCatPage}
+                catKeyword={catKeyword}
+                setCatKeyword={setCatKeyword}
                 metaCats={metaCats}
             />
 
@@ -35,6 +39,8 @@ export default function MenuModule() {
                 itemPage={itemPage}
                 setItemPage={setItemPage}
                 metaItems={metaItems}
+                keyword={keyword}
+                setKeyword={setKeyword}
             />
         </div>
     );

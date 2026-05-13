@@ -44,7 +44,7 @@ router.post('/reservations', async (req: Request, res: Response) => {
                 reservationTime: reservationTimeDate,
                 note,
                 status: finalStatus,
-                tableId: assignedTableId
+                tableId: assignedTableId || null
             }
         });
 
@@ -58,11 +58,39 @@ router.post('/reservations', async (req: Request, res: Response) => {
 // Admin lấy danh sách đặt bàn
 router.get('/reservations', async (req: Request, res: Response) => {
     try {
-        const reservations = await prisma.reservation.findMany({
-            orderBy: { reservationTime: 'asc' },
-            include: { table: true }
+        const keyword = req.query.keyword as string;
+        let page = parseInt(req.query.page as string) || 1;
+        let limit = parseInt(req.query.limit as string) || 20;
+        const skip = (page - 1) * limit;
+
+        const where: any = {};
+        if (keyword) {
+            where.OR = [
+                { customerName: { contains: keyword, mode: 'insensitive' } },
+                { customerPhone: { contains: keyword, mode: 'insensitive' } }
+            ];
+        }
+
+        const [reservations, total] = await Promise.all([
+            prisma.reservation.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { reservationTime: 'asc' },
+                include: { table: true }
+            }),
+            prisma.reservation.count({ where })
+        ]);
+
+        res.status(200).json({
+            data: reservations,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
         });
-        res.status(200).json(reservations);
     } catch (error) {
         res.status(500).json({ error: 'Lỗi lấy danh sách đặt bàn' });
     }
@@ -72,9 +100,10 @@ router.get('/reservations', async (req: Request, res: Response) => {
 router.patch('/reservations/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        const reservationId = String(id);
         const { status, tableId, customerName, customerPhone, guests, reservationTime, note } = req.body;
 
-        const current = await prisma.reservation.findUnique({ where: { id } });
+        const current = await prisma.reservation.findUnique({ where: { id: reservationId } });
         if (!current) return res.status(404).json({ error: 'Không tìm thấy đơn đặt bàn' });
 
         const finalTableId = tableId !== undefined ? tableId : current.tableId;
@@ -94,7 +123,7 @@ router.patch('/reservations/:id', async (req: Request, res: Response) => {
                         gt: startRange,
                         lt: endRange
                     },
-                    NOT: { id }
+                    NOT: { id: reservationId }
                 }
             });
 
@@ -105,17 +134,18 @@ router.patch('/reservations/:id', async (req: Request, res: Response) => {
             }
         }
 
+        const updateData: any = {};
+        if (status !== undefined) updateData.status = status;
+        if (tableId !== undefined) updateData.tableId = tableId || null;
+        if (customerName !== undefined) updateData.customerName = customerName;
+        if (customerPhone !== undefined) updateData.customerPhone = customerPhone;
+        if (guests !== undefined) updateData.guests = Number(guests);
+        if (reservationTime !== undefined) updateData.reservationTime = new Date(reservationTime);
+        if (note !== undefined) updateData.note = note;
+
         const updated = await prisma.reservation.update({
-            where: { id },
-            data: {
-                status,
-                tableId: tableId !== undefined ? tableId : undefined,
-                customerName,
-                customerPhone,
-                guests: guests ? Number(guests) : undefined,
-                reservationTime: reservationTime ? new Date(reservationTime) : undefined,
-                note
-            }
+            where: { id: reservationId },
+            data: updateData
         });
 
         // Xử lý thay đổi trạng thái bàn
@@ -156,7 +186,7 @@ router.patch('/reservations/:id', async (req: Request, res: Response) => {
                     where: { 
                         tableId: newTableId, 
                         status: { in: ['CONFIRMED', 'ARRIVED'] },
-                        NOT: { id }
+                        NOT: { id: reservationId }
                     }
                 });
                 if (!otherActive) {

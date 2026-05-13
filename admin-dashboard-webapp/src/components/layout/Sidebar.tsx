@@ -15,11 +15,13 @@ import {
     MessageCircle,
     Package,
     Ticket,
-    CalendarCheck
+    CalendarCheck,
+    BarChart3
 } from 'lucide-react';
 
 const SIDEBAR_TABS = [
     { name: 'Tổng quan', link: constants.ROUTES.DASHBOARD, icon: LayoutDashboard, roles: ['ADMIN'] },
+    { name: 'Báo cáo doanh thu', link: constants.ROUTES.REPORTS, icon: BarChart3, roles: ['ADMIN'] },
     { name: 'Bán hàng (POS)', link: constants.ROUTES.POS, icon: LayoutPanelTop, roles: ['ADMIN', 'CASHIER'] },
     { name: 'Nhà bếp', link: constants.ROUTES.KITCHEN, icon: ChefHat, roles: ['ADMIN', 'KITCHEN'] },
     { name: 'Sơ đồ Bàn', link: constants.ROUTES.TABLES, icon: LibrarySquare, roles: ['ADMIN', 'CASHIER'] },
