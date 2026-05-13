@@ -25,7 +25,7 @@ import dashboardRoutes from './controller/dashboard.controller';
 import reservationRoutes from './controller/reservation.controller';
 import paymentRoutes from './controller/payment.controller';
 import invoiceRoutes from './controller/invoice.controller';
-import { initMinio } from './utils/minio';
+import { initMinio, minioClient } from './utils/minio';
 
 import { initSocket } from './socket';
 
@@ -37,6 +37,18 @@ const PORT = Number(process.env.PORT) || 4000;
 
 // Initialize MinIO Bucket and Policy
 initMinio();
+
+// Proxy route để lấy ảnh từ MinIO
+app.get('/restaurant-images/:filename', async (req, res) => {
+    try {
+        const bucketName = process.env.MINIO_BUCKET || 'restaurant-images';
+        const fileName = req.params.filename;
+        const dataStream = await minioClient.getObject(bucketName, fileName);
+        dataStream.pipe(res);
+    } catch (error) {
+        res.status(404).send('Không tìm thấy ảnh');
+    }
+});
 
 app.use(cors({
     origin: true,

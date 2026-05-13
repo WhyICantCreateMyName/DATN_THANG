@@ -25,9 +25,7 @@ router.post('/api/upload', upload.single('image'), async (req: Request, res: Res
             { 'Content-Type': file.mimetype }
         );
 
-        // Construct public URL
-        const protocol = process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http';
-        const url = `${protocol}://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${bucketName}/${fileName}`;
+        const url = `/${bucketName}/${fileName}`;
 
         res.status(200).json({
             message: 'Tải lên thành công',

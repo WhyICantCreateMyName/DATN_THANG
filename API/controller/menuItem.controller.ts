@@ -37,6 +37,10 @@ router.get('/menu-items', async (req: Request, res: Response) => {
             prisma.menuItem.count({ where })
         ]);
 
+        items.forEach(item => {
+            item.imageUrl = `${req.protocol}://${req.headers.host}${item.imageUrl}`;
+        });
+
         res.status(200).json({
             data: items,
             meta: {
