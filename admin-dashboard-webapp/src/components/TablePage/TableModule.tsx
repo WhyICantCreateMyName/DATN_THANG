@@ -25,9 +25,9 @@ export default function TableModule() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const qrRefs = useRef<{ [key: string]: SVGSVGElement | null }>({});
 
-    const clientUrl = process.env.NODE_ENV === 'development' ? constants.url.client.development : constants.url.client.production;
+    const clientUrl = constants.url.client.production;
+    // const clientUrl = constants.url.client.development;
 
-    // Sync SWR data to local state
     React.useEffect(() => {
         if (tables) {
             // Only sync if we are not in the middle of creating or editing

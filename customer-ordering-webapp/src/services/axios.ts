@@ -2,7 +2,8 @@ import axios from 'axios';
 import constants from '@/constants';
 
 const api = axios.create({
-    baseURL: process.env.NODE_ENV === 'development' ? constants.url.api.development : constants.url.api.production,
+    baseURL: constants.url.api.production,
+    // baseURL: constants.url.api.development,
     headers: {
         'Content-Type': 'application/json',
     },
