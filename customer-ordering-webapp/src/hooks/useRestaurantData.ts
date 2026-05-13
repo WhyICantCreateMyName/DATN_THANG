@@ -85,7 +85,16 @@ export const useRestaurantData = (qrCode?: string) => {
 
     // 2. Real-time Status Updates
     useEffect(() => {
-        if (!socket) return;
+        if (!socket || !tableId) return;
+
+        // Đảm bảo khách hàng ở trong phòng của bàn để nhận thông báo trạng thái đơn
+        const joinRoom = () => {
+            console.log(`📍 [Restaurant Data] Joining table room: table_${tableId}`);
+            socket.emit('join_table', tableId);
+        };
+
+        joinRoom();
+        socket.on('connect', joinRoom);
 
         const handleStatusUpdate = (data: { orderId: string, status: string, message: string }) => {
             setOrderHistory(prev => prev.map(order =>
@@ -105,10 +114,11 @@ export const useRestaurantData = (qrCode?: string) => {
         });
 
         return () => {
+            socket.off('connect', joinRoom);
             socket.off('ORDER_STATUS_UPDATED', handleStatusUpdate);
             socket.off('SESSION_ENDED');
         };
-    }, [socket]);
+    }, [socket, tableId]);
 
     const refreshHistory = async () => {
         if (qrCode) {

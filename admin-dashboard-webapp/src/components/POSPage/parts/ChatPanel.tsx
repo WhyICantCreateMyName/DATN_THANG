@@ -1,21 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, MessageCircle, Clock } from 'lucide-react';
+import { Send, MessageCircle, Clock } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
-import { Socket } from 'socket.io-client';
 
 interface ChatPanelProps {
     tableId: string;
-    socket: Socket | null;
 }
 
-export default function ChatPanel({ tableId, socket }: ChatPanelProps) {
-    const { messages, sendMessage, isLoading } = useChat(tableId, socket);
+export default function ChatPanel({ tableId }: ChatPanelProps) {
+    const { messages, sendMessage, isLoading } = useChat(tableId);
     const [input, setInput] = useState('');
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Tự động cuộn xuống cuối khi có tin mới
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -26,13 +23,12 @@ export default function ChatPanel({ tableId, socket }: ChatPanelProps) {
         e.preventDefault();
         if (!input.trim()) return;
         
-        sendMessage(input, 'STAFF_POS'); // STAFF_POS là ID định danh chung cho quầy POS
+        sendMessage(input, 'STAFF_POS');
         setInput('');
     };
 
     return (
         <div className="flex flex-col h-full bg-white border-l border-gray-100">
-            {/* Header */}
             <div className="p-4 border-b border-gray-50 flex items-center gap-3 bg-gray-50/30">
                 <div className="p-2 bg-blue-100 rounded-lg">
                     <MessageCircle className="w-5 h-5 text-blue-600" />
@@ -43,7 +39,6 @@ export default function ChatPanel({ tableId, socket }: ChatPanelProps) {
                 </div>
             </div>
 
-            {/* Messages Area */}
             <div 
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
@@ -97,7 +92,6 @@ export default function ChatPanel({ tableId, socket }: ChatPanelProps) {
                 )}
             </div>
 
-            {/* Input Area */}
             <form 
                 onSubmit={handleSend}
                 className="p-4 border-t border-gray-50 bg-gray-50/30 flex gap-2"

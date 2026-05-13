@@ -44,7 +44,17 @@ export const useCustomerChat = (tableId: string, chatSessionId: string, initialM
   useEffect(() => {
     if (!socket || !tableId) return;
 
-    socket.emit('join_table', tableId);
+    // Hàm thực hiện join vào phòng của bàn
+    const joinRoom = () => {
+      console.log(`📍 [Customer Chat] Đang tham gia phòng của bàn: table_${tableId}`);
+      socket.emit('join_table', tableId);
+    };
+
+    // Thực hiện join ngay lập tức
+    joinRoom();
+
+    // Lắng nghe sự kiện connect để join lại nếu bị mất mạng rồi có lại
+    socket.on('connect', joinRoom);
 
     const handleMessage = (message: Message) => {
       setMessages((prev) => {
@@ -57,12 +67,13 @@ export const useCustomerChat = (tableId: string, chatSessionId: string, initialM
     socket.on('receive_message', handleMessage);
 
     return () => {
+      socket.off('connect', joinRoom);
       socket.off('receive_message', handleMessage);
     };
   }, [socket, tableId]);
 
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || !chatSessionId) return;
+    if (!content.trim()) return;
 
     const messageData = {
       chatSessionId,
@@ -72,10 +83,12 @@ export const useCustomerChat = (tableId: string, chatSessionId: string, initialM
       senderId: guestId
     };
 
+    if (!chatSessionId || !tableId) return;
+
     try {
       await api.post('/chat/messages', messageData);
-    } catch (error) {
-      console.error('Lỗi gửi tin nhắn:', error);
+    } catch (error: any) {
+      console.error('❌ [Customer Chat] Lỗi gửi tin nhắn:', error);
     }
   }, [tableId, chatSessionId, guestId]);
 

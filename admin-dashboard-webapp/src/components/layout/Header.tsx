@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 export default function Header() {
     const { user, logout } = useAuthContext();
-    const { waitingOrders, staffNotifications, markAsRead } = useNotificationContext();
+    const { waitingOrders, staffNotifications, markAsRead, markTableAsRead, markAllTableNotificationsAsRead } = useNotificationContext();
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'orders' | 'messages'>('orders');
 
@@ -116,7 +116,10 @@ export default function Header() {
                                                 key={notif.id}
                                                 className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
                                             >
-                                                <div className="flex items-start gap-3 min-w-0" onClick={() => markAsRead(notif.id)}>
+                                                <div className="flex items-start gap-3 min-w-0" onClick={() => {
+                                                    if (notif.tableId) markAllTableNotificationsAsRead(notif.tableId);
+                                                    else markAsRead(notif.id);
+                                                }}>
                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${notif.type === 'CALL_STAFF' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
                                                         {notif.type === 'CALL_STAFF' ? <BellRing size={18} /> : <MessageSquare size={18} />}
                                                     </div>
@@ -133,7 +136,8 @@ export default function Header() {
                                                 <Link
                                                     href={`/pos?tableId=${notif.tableId}`}
                                                     onClick={() => {
-                                                        markAsRead(notif.id);
+                                                        if (notif.tableId) markAllTableNotificationsAsRead(notif.tableId);
+                                                        else markAsRead(notif.id);
                                                         setIsOpen(false);
                                                     }}
                                                     className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-1 hover:gap-2 transition-all opacity-0 group-hover:opacity-100 bg-blue-50 px-3 py-2 rounded-xl shrink-0 ml-2"

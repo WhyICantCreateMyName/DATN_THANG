@@ -230,11 +230,12 @@ router.post('/orders', async (req: Request, res: Response) => {
 
             // Emit tới room của bàn
             if (io) {
+                console.log('📡 [Order API] Phát thông báo tới staff_room cho bàn:', table.name);
                 io.to(`table_${tableId}`).emit('receive_message', systemMsg);
                 io.to(`table_${tableId}`).emit('new_order_placed', newOrder);
 
-                // Gửi thông báo TOÀN CỤC tới tất cả nhân viên (Admin/POS)
-                io.emit('staff_notification', {
+                // Gửi thông báo tới phòng nhân viên (Admin/POS)
+                io.to('staff_room').emit('staff_notification', {
                     type: 'NEW_ORDER',
                     tableId: tableId,
                     tableName: table.name,
@@ -362,7 +363,7 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
             });
 
             // Gửi cho toàn bộ nhân viên cập nhật UI
-            io.emit('staff_notification', {
+            io.to('staff_room').emit('staff_notification', {
                 type: 'ORDER_UPDATED',
                 tableId: updatedOrder.tableId,
                 status: updatedOrder.status

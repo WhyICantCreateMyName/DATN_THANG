@@ -10,17 +10,25 @@ import { reservationService, Reservation } from '@/services/reservation.service'
 import { useNotificationContext } from '@/contexts/NotificationContext';
 
 export const usePOS = () => {
-    const { waitingOrders, mutateWaitingOrders, unreadTableIds, markTableAsRead } = useNotificationContext();
-    const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+    const { 
+        waitingOrders, 
+        mutateAll, 
+        unreadTableIds, 
+        markTableAsRead,
+        tables,
+        isTablesLoading,
+        isPaymentSuccess,
+        setIsPaymentSuccess,
+        activeTableId,
+        setActiveTableId
+    } = useNotificationContext();
+
+    // Dùng chung state từ Context để tự động đồng bộ thông báo
+    const selectedTableId = activeTableId;
+    const setSelectedTableId = setActiveTableId;
+    
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
     const [vnpayUrl, setVnpayUrl] = useState<string | null>(null);
-    const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
-
-    // Sử dụng unreadTableIds trực tiếp từ Context
-    const unreadTables = unreadTableIds;
-
-    const socket = useSocket();
-    const { tables, isLoading: isTablesLoading, mutateTables, checkoutTable } = useTable();
 
     // 2. Đơn hàng của bàn đang chọn
     const {
@@ -42,49 +50,23 @@ export const usePOS = () => {
         (reservations?.data as Reservation[])?.filter((r: any) => ['PENDING', 'CONFIRMED', 'ARRIVED'].includes(r.status)) || [],
         [reservations]);
 
-    const selectedTable = useMemo(() => tables?.find(t => t.id === selectedTableId), [tables, selectedTableId]);
-
-    // 5. Socket Logic - CHỈ DÙNG ĐỂ FETCH LẠI DỮ LIỆU
-    useEffect(() => {
-        if (!socket) return;
-
-        socket.on('staff_notification', () => {
-            mutateTables();
-            mutateWaitingOrders();
-            if (selectedTableId) mutateActiveOrders();
-        });
-
-        socket.on('PAYMENT_SUCCESS', (data: any) => {
-            setIsPaymentSuccess(true);
-            mutateTables();
-            if (selectedTableId) mutateActiveOrders();
-
-            setTimeout(() => {
-                setVnpayUrl(null);
-                setIsPaymentSuccess(false);
-            }, 4000);
-        });
-
-        return () => {
-            socket.off('staff_notification');
-            socket.off('PAYMENT_SUCCESS');
-        };
-    }, [socket, selectedTableId, mutateTables, mutateWaitingOrders, mutateActiveOrders]);
+    const selectedTable = useMemo(() => tables?.find((t: any) => t.id === selectedTableId), [tables, selectedTableId]);
 
     // 6. Hành động
     const handleApprove = async (id: string) => {
         await approveOrder(id);
-        mutateTables(); mutateWaitingOrders(); mutateActiveOrders();
+        mutateAll(); 
+        mutateActiveOrders();
     };
 
     const handleCancel = async (id: string) => {
         await cancelOrder(id);
-        mutateActiveOrders(); mutateWaitingOrders();
+        mutateActiveOrders(); 
+        mutateAll();
     };
 
     const handleUpdateStatus = async (id: string, status: string) => {
         try {
-            // Cập nhật Optimistic (Cập nhật cache local ngay lập tức)
             mutateActiveOrders((currentOrders: any) => {
                 if (!currentOrders) return currentOrders;
                 return currentOrders.map((o: any) =>
@@ -94,55 +76,55 @@ export const usePOS = () => {
 
             await orderService.updateStatus(id, status);
 
-            // Sau khi thành công, re-fetch chuẩn
             mutateActiveOrders();
-            mutateWaitingOrders();
-            mutateTables();
+            mutateAll();
         } catch (error) {
             console.error('[POS] Lỗi khi cập nhật trạng thái:', error);
-            alert('Không thể cập nhật trạng thái đơn hàng');
             mutateActiveOrders();
         }
     };
 
     const handleCheckout = async (paymentMethod: string = 'CASH') => {
         if (!selectedTableId || !selectedTable) return;
+        const { checkoutTable } = tableService; // Dùng trực tiếp service hoặc hook
+        
         const ids = selectedOrderIds.length > 0 ? selectedOrderIds : undefined;
-        const result = await checkoutTable(selectedTableId, ids, paymentMethod);
+        const result = await tableService.checkoutTable(selectedTableId, ids, paymentMethod);
 
-        if (paymentMethod === 'E_WALLET' && result?.invoiceId) {
+        if (paymentMethod === 'E_WALLET' && result?.data?.invoiceId) {
             try {
-                const payRes = await api.post('/payment/vnpay/create-url', { invoiceId: result.invoiceId });
+                const payRes = await api.post('/payment/vnpay/create-url', { invoiceId: result.data.invoiceId });
                 if (payRes.data.url) {
                     setIsPaymentSuccess(false);
                     setVnpayUrl(payRes.data.url);
                 }
             } catch (error) {
                 console.error('Lỗi tạo thanh toán VNPay:', error);
-                alert('Không thể tạo liên kết thanh toán VNPay');
             }
         }
 
         setSelectedOrderIds([]);
-        mutateTables(); mutateWaitingOrders(); mutateActiveOrders();
+        mutateAll(); 
+        mutateActiveOrders();
     };
 
     const handleMoveOrder = async (orderId: string, targetTableId: string) => {
         await orderService.moveOrder(orderId, targetTableId);
-        mutateTables(); mutateActiveOrders(); mutateWaitingOrders();
+        mutateAll(); 
+        mutateActiveOrders();
     };
 
     const handleMergeTables = async (sourceId: string, targetId: string) => {
         await tableService.mergeTables(sourceId, targetId);
-        mutateTables();
+        mutateAll();
         if (sourceId === selectedTableId) setSelectedTableId(targetId);
-        mutateActiveOrders(); mutateWaitingOrders();
+        mutateActiveOrders();
     };
 
     const calculateTotal = () => {
         const orders = selectedOrderIds.length > 0
-            ? activeOrders.filter(o => selectedOrderIds.includes(o.id))
-            : activeOrders;
+            ? (activeOrders || []).filter(o => selectedOrderIds.includes(o.id))
+            : (activeOrders || []);
 
         const subTotal = orders.reduce((sum, o) => sum + o.totalAmount, 0);
         const totalDiscount = orders.reduce((sum, o) => sum + (o.discountAmount || 0), 0);
@@ -160,18 +142,17 @@ export const usePOS = () => {
 
     return {
         selectedTableId, setSelectedTableId,
-        unreadTables, unreadTableIds, markTableAsRead,
+        unreadTables: unreadTableIds, unreadTableIds, markTableAsRead,
         selectedOrderIds, toggleOrderSelection,
         vnpayUrl, setVnpayUrl,
         isPaymentSuccess, setIsPaymentSuccess,
         tables, isTablesLoading,
-        activeOrders, isOrdersLoading,
+        activeOrders: activeOrders || [], isOrdersLoading,
         waitingOrders,
         selectedTable,
-        socket,
         handleApprove, handleCancel, handleUpdateStatus, handleCheckout, handleMoveOrder, handleMergeTables,
         calculateTotal,
-        mutateTables, mutateWaitingOrders, mutateReservations,
+        mutateTables: mutateAll, mutateWaitingOrders: mutateAll, mutateReservations,
         activeReservations
     };
 };

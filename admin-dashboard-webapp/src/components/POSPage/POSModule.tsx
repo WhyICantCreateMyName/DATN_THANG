@@ -25,7 +25,6 @@ export default function POSModule() {
         activeOrders, isOrdersLoading,
         waitingOrders,
         selectedTable,
-        socket,
         handleApprove, handleCancel, handleUpdateStatus, handleCheckout, handleMoveOrder, handleMergeTables,
         calculateTotal,
         mutateTables, mutateWaitingOrders,
@@ -33,12 +32,27 @@ export default function POSModule() {
         activeReservations
     } = usePOS();
 
+    // Reset bàn đang chọn khi thoát khỏi màn hình POS (Tránh việc tự động đọc tin nhắn khi đang ở trang khác)
+    useEffect(() => {
+        return () => {
+            setSelectedTableId(null);
+        };
+    }, [setSelectedTableId]);
+
     // Tự động chọn bàn nếu có ID từ URL (Ví dụ: từ thông báo đẩy)
     useEffect(() => {
         if (tableIdFromUrl) {
             setSelectedTableId(tableIdFromUrl);
         }
     }, [tableIdFromUrl, setSelectedTableId]);
+
+    // LOG DEBUG: Theo dõi ID bàn và thông báo
+    useEffect(() => {
+        if (tables && tables.length > 0) {
+            console.log('%c🔍 [POS Debug] Danh sách ID bàn hiện có:', 'color: #3b82f6; font-weight: bold;', tables.map((t: any) => t.id));
+            console.log('%c🔴 [POS Debug] Các bàn đang có thông báo (Unread):', 'color: #ef4444; font-weight: bold;', unreadTables);
+        }
+    }, [tables, unreadTables]);
 
     const hasNewOrder = (id: string) => waitingOrders.some(o => o.tableId === id);
 
@@ -99,7 +113,7 @@ export default function POSModule() {
 
                         {/* Cột phải: Chat với khách */}
                         <div className="w-[350px] flex-shrink-0">
-                            <ChatPanel tableId={selectedTableId} socket={socket} />
+                            <ChatPanel tableId={selectedTableId} />
                         </div>
                     </div>
                 ) : (

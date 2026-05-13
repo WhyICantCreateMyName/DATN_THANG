@@ -66,7 +66,7 @@ router.post('/chat/messages', async (req: Request, res: Response) => {
                         where: { id: tableId }
                     });
 
-                    io.emit('staff_notification', {
+                    io.to('staff_room').emit('staff_notification', {
                         type: 'NEW_MESSAGE',
                         tableId: tableId,
                         tableName: table?.name || tableId,
@@ -74,7 +74,7 @@ router.post('/chat/messages', async (req: Request, res: Response) => {
                     });
                 } catch (err) {
                     // Fallback
-                    io.emit('staff_notification', {
+                    io.to('staff_room').emit('staff_notification', {
                         type: 'NEW_MESSAGE',
                         tableId: tableId,
                         message: `Có tin nhắn mới từ bàn ${tableId}`

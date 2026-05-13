@@ -60,16 +60,11 @@ export default function StaffChatCenter() {
     useEffect(() => {
         if (!socket) return;
 
-        // Chỉ join room khi đã kết nối
-        socket.emit('join_staff_room');
-
         const handleReceiveMessage = (message: ChatMessage) => {
+            console.log('%c📬 [Chat Center] Nhận tin nhắn mới:', 'color: #00ff00; font-weight: bold;', message);
             setSessions(prev => prev.map(s => {
                 if (s.id === message.chatSessionId) {
-                    if (message.senderType === 'CUSTOMER') {
-                        audioRef.current?.play().catch(() => { });
-                    }
-                    // Thêm tin nhắn nếu chưa tồn tại (chống trùng lặp do React StrictMode hoặc Socket)
+                    // Cập nhật tin nhắn vào danh sách
                     if (s.messages.some(m => m.id === message.id)) return s;
                     return { ...s, messages: [...s.messages, message] };
                 }
@@ -77,21 +72,10 @@ export default function StaffChatCenter() {
             }));
         };
 
-        const handleStaffNotification = (data: any) => {
-            if (data.type === 'CALL_STAFF') {
-                audioRef.current?.play().catch(() => { });
-                alert(`🚨 CẢNH BÁO: Bàn ${data.tableName} đang gọi nhân viên!`);
-            }
-            // NEW_MESSAGE đã được phát âm thanh ở NotificationContext rồi, nên ở đây không cần nữa để tránh kêu đúp
-        };
-
         socket.on('receive_message', handleReceiveMessage);
-        socket.on('staff_notification', handleStaffNotification);
 
         return () => {
             socket.off('receive_message', handleReceiveMessage);
-            socket.off('staff_notification', handleStaffNotification);
-            // Không ngắt kết nối (disconnect) vì đây là socket dùng chung của toàn app
         };
     }, [socket]);
 
@@ -110,16 +94,15 @@ export default function StaffChatCenter() {
             chatSessionId: selectedSessionId,
             tableId: selectedSession.tableId,
             content: inputValue,
-            senderType: 'STAFF',
+            senderType: 'STAFF' as const,
             senderId: user.id
         };
 
         try {
             await api.post('/chat/messages', messageData);
             setInputValue('');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Lỗi gửi tin nhắn:', error);
-            alert('Gửi tin nhắn thất bại, vui lòng thử lại!');
         }
     };
 

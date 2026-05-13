@@ -10,26 +10,31 @@ export const useSocket = () => {
     useEffect(() => {
         if (!socketInstance) {
             const socketUrl = constants.url.api.production;
-            // const socketUrl = constants.url.api.development;
-
             socketInstance = io(socketUrl, {
                 transports: ['websocket'],
-                withCredentials: true
+                withCredentials: true,
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
             });
 
             socketInstance.on('connect', () => {
-                console.log('📡 Socket connected to server:', socketInstance?.id);
+                console.log('%c📡 Socket Connected:', 'color: #00ff00; font-weight: bold;', socketInstance?.id);
                 socketInstance?.emit('join_staff_room');
+            });
+
+            socketInstance.on('disconnect', (reason) => {
+                console.log('%c❌ Socket Disconnected:', 'color: #ff0000; font-weight: bold;', reason);
             });
         }
 
-        if (socket !== socketInstance) {
+        setSocket(socketInstance);
+    }, []);
+
+    useEffect(() => {
+        if (socketInstance && socket !== socketInstance) {
             setSocket(socketInstance);
         }
-
-        return () => {
-            // Giữ kết nối cho staff
-        };
     }, [socket]);
 
     return socket;

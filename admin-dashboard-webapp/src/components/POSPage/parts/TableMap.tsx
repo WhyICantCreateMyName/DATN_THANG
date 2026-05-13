@@ -30,9 +30,9 @@ export default function TableMap({
 
     const getTableStyle = (table: Table, hasNew: boolean, hasRes: boolean) => {
         if (hasNew) return 'bg-red-100 border-red-500 text-red-700 animate-pulse';
-        
+
         switch (table.status) {
-            case 'AVAILABLE': 
+            case 'AVAILABLE':
                 return hasRes ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-green-50 border-green-100 text-green-700';
             case 'RESERVED':
                 return 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-inner';
@@ -87,7 +87,7 @@ export default function TableMap({
                                 >
                                     <span className="text-[10px] font-black uppercase opacity-60 tracking-widest">BÀN</span>
                                     <span className="text-3xl font-black">{table.name}</span>
-                                    
+
                                     <div className="flex items-center gap-1 mt-1">
                                         <User className="w-3 h-3" />
                                         <span className="text-[10px] font-bold">{table.capacity} Ghế</span>
@@ -96,22 +96,22 @@ export default function TableMap({
 
                                 {/* Badge & Icons */}
                                 {hasNew && <Flame className="w-4 h-4 text-red-500 absolute top-3 left-3" />}
-                                
+
                                 {hasReservation && (
-                                    <button 
+                                    <button
                                         onClick={(e) => { e.stopPropagation(); setSelectedTableForRes(table); }}
                                         className="absolute top-2 left-2 p-1.5 bg-white rounded-lg shadow-sm border border-indigo-100 text-indigo-500 hover:scale-110 transition-transform"
                                     >
-                                         <Calendar className="w-3.5 h-3.5" />
+                                        <Calendar className="w-3.5 h-3.5" />
                                     </button>
                                 )}
 
                                 {hasUnread && (
-                                    <div className="absolute top-2 right-2 flex h-4 w-4">
+                                    <div className="absolute top-2 left-2 flex h-4 w-4">
                                         <MessageCircle className="w-4 h-4 text-blue-500 animate-bounce" />
                                     </div>
                                 )}
-                                
+
                                 {(table.status === 'OCCUPIED' || table.status === 'RESERVED') && !hasNew && (
                                     <div className={`absolute top-3 right-3 w-2.5 h-2.5 rounded-full shadow-sm ${table.status === 'RESERVED' ? 'bg-indigo-500' : 'bg-orange-500'}`} />
                                 )}
