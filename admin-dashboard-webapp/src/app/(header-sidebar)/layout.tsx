@@ -1,11 +1,11 @@
 import React from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import { OrderProvider } from '@/contexts/OrderContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
-        <OrderProvider>
+        <NotificationProvider>
             <div className="flex h-screen bg-gray-50 overflow-hidden">
                 {/* Sidebar bên trái */}
                 <Sidebar />
@@ -20,6 +20,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </main>
                 </div>
             </div>
-        </OrderProvider>
+        </NotificationProvider>
     );
 }

@@ -18,8 +18,6 @@ export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
     const { user, isLoading } = useAuthContext();
     const router = useRouter();
 
-    console.log(user);
-
     useEffect(() => {
         if (!isLoading && user) {
             // Nếu role của user không nằm trong danh sách được cho phép
@@ -27,16 +25,12 @@ export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
                 // Điều hướng về dashboard mặc định của từng role
                 if (user.role === 'ADMIN') {
                     router.push(constants.ROUTES.DASHBOARD);
-                    console.log("redirect to Admin Page")
                 } else if (user.role === 'CASHIER') {
                     router.push(constants.ROUTES.POS);
-                    console.log("redirect to Cashier Page")
                 } else if (user.role === 'KITCHEN') {
                     router.push(constants.ROUTES.KITCHEN);
-                    console.log("redirect to Kitchen Page")
                 } else {
                     router.push(constants.ROUTES.LOGIN);
-                    console.log("redirect to Login Page")
                 }
             }
         }

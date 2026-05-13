@@ -8,12 +8,16 @@ import CheckoutPanel from './parts/CheckoutPanel';
 import OrderActions from './parts/OrderActions';
 import ChatPanel from './parts/ChatPanel';
 import VNPAYQRModal from './parts/VNPAYQRModal';
+import { useSearchParams } from 'next/navigation';
 import { LayoutGrid } from 'lucide-react';
 
 export default function POSModule() {
+    const searchParams = useSearchParams();
+    const tableIdFromUrl = searchParams.get('tableId');
+
     const {
         selectedTableId, setSelectedTableId,
-        unreadTables, setUnreadTables,
+        unreadTables, markTableAsRead,
         selectedOrderIds, toggleOrderSelection,
         vnpayUrl, setVnpayUrl,
         isPaymentSuccess,
@@ -21,7 +25,6 @@ export default function POSModule() {
         activeOrders, isOrdersLoading,
         waitingOrders,
         selectedTable,
-        audioRef, notificationAudioRef,
         socket,
         handleApprove, handleCancel, handleUpdateStatus, handleCheckout, handleMoveOrder, handleMergeTables,
         calculateTotal,
@@ -30,18 +33,17 @@ export default function POSModule() {
         activeReservations
     } = usePOS();
 
-    // Khi chọn bàn, xóa thông báo tin nhắn chưa đọc của bàn đó
+    // Tự động chọn bàn nếu có ID từ URL (Ví dụ: từ thông báo đẩy)
     useEffect(() => {
-        if (selectedTableId) {
-            setUnreadTables(prev => prev.filter(id => id !== selectedTableId));
+        if (tableIdFromUrl) {
+            setSelectedTableId(tableIdFromUrl);
         }
-    }, [selectedTableId, setUnreadTables]);
+    }, [tableIdFromUrl, setSelectedTableId]);
 
     const hasNewOrder = (id: string) => waitingOrders.some(o => o.tableId === id);
 
     return (
         <div className="flex h-[calc(100vh-160px)] gap-6 overflow-hidden">
-            <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto" />
 
             {/* PHẦN 1: SƠ ĐỒ BÀN (30% chiều rộng) */}
             <div className="w-[30%] min-w-[320px]">
@@ -113,9 +115,9 @@ export default function POSModule() {
 
             {/* Modal hiển thị mã QR VNPay */}
             {vnpayUrl && (
-                <VNPAYQRModal 
-                    url={vnpayUrl} 
-                    onClose={() => setVnpayUrl(null)} 
+                <VNPAYQRModal
+                    url={vnpayUrl}
+                    onClose={() => setVnpayUrl(null)}
                     tableName={selectedTable?.name}
                     isSuccess={isPaymentSuccess}
                 />

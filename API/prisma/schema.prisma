@@ -33,26 +33,24 @@ model Table {
   capacity     Int
   status       TableStatus   @default(AVAILABLE)
   qrCode       String?       @unique
-  orders       Order[]
-  reservations Reservation[]
   chatSessions ChatSession[]
   invoices     Invoice[]
+  orders       Order[]
+  reservations Reservation[]
 }
 
 model Reservation {
   id              String            @id @default(uuid())
   customerName    String
+  reservationTime DateTime
+  tableId         String?
+  status          ReservationStatus @default(PENDING)
+  createdAt       DateTime          @default(now())
   customerPhone   String
   guests          Int
-  reservationTime DateTime
   note            String?
-  status          ReservationStatus @default(PENDING)
-  
-  tableId         String?           // Không bắt buộc khi mới đặt online
-  table           Table?            @relation(fields: [tableId], references: [id])
-  
-  createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  table           Table?            @relation(fields: [tableId], references: [id])
 }
 
 model Category {
@@ -62,47 +60,46 @@ model Category {
 }
 
 model MenuItem {
-  id          String      @id @default(uuid())
+  id          String               @id @default(uuid())
   name        String
   description String?
   price       Float
   imageUrl    String?
-  isAvailable Boolean     @default(true)
+  isAvailable Boolean              @default(true)
   categoryId  String
-  category    Category    @relation(fields: [categoryId], references: [id])
-  orderItems  OrderItem[]
+  category    Category             @relation(fields: [categoryId], references: [id])
   ingredients MenuItemIngredient[]
+  orderItems  OrderItem[]
 }
 
 model MenuItemIngredient {
   id           String     @id @default(uuid())
   menuItemId   String
   ingredientId String
-  quantity     Float      // Lượng tiêu hao (g, ml, cái, v.v.)
-  
-  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id])
+  quantity     Float
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id])
 
   @@unique([menuItemId, ingredientId])
 }
 
 model Order {
-  id             String      @id @default(uuid())
-  status         OrderStatus @default(PENDING)
-  totalAmount    Float       @default(0)
-  discountAmount Float       @default(0)
-  voucherCode    String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id             String       @id @default(uuid())
+  status         OrderStatus  @default(PENDING)
+  totalAmount    Float        @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   tableId        String
-  customerPhone  String?
   waiterId       String?
   chatSessionId  String?
   invoiceId      String?
-  invoice        Invoice?    @relation(fields: [invoiceId], references: [id])
-  table          Table       @relation(fields: [tableId], references: [id])
-  waiter         User?       @relation("WaiterOrders", fields: [waiterId], references: [id])
+  discountAmount Float        @default(0)
+  voucherCode    String?
+  customerPhone  String?
   chatSession    ChatSession? @relation(fields: [chatSessionId], references: [id])
+  invoice        Invoice?     @relation(fields: [invoiceId], references: [id])
+  table          Table        @relation(fields: [tableId], references: [id])
+  waiter         User?        @relation("WaiterOrders", fields: [waiterId], references: [id])
   items          OrderItem[]
 }
 
@@ -111,41 +108,38 @@ model OrderItem {
   quantity    Int
   priceAtTime Float
   notes       String?
-  status      OrderItemStatus @default(PENDING)
   orderId     String
   menuItemId  String
+  status      OrderItemStatus @default(PENDING)
   menuItem    MenuItem        @relation(fields: [menuItemId], references: [id])
   order       Order           @relation(fields: [orderId], references: [id])
 }
 
 model Invoice {
-  id          String    @id @default(uuid())
-  subTotal    Float
-  tax         Float     @default(0)
-  discount    Float     @default(0)
-  finalAmount Float
-  isPaid      Boolean   @default(false)
-  paymentMethod PaymentMethod @default(CASH)
-  issuedAt    DateTime  @default(now())
-
-  tableId     String
-  table       Table     @relation(fields: [tableId], references: [id])
-
+  id            String        @id @default(uuid())
+  subTotal      Float
+  tax           Float         @default(0)
+  discount      Float         @default(0)
+  finalAmount   Float
+  isPaid        Boolean       @default(false)
+  issuedAt      DateTime      @default(now())
+  tableId       String
   chatSessionId String?
-  chatSession   ChatSession? @relation(fields: [chatSessionId], references: [id])
-
-  orders      Order[]
-  payments    Payment[]
+  paymentMethod PaymentMethod @default(CASH)
+  chatSession   ChatSession?  @relation(fields: [chatSessionId], references: [id])
+  table         Table         @relation(fields: [tableId], references: [id])
+  orders        Order[]
+  payments      Payment[]
 }
 
 model Payment {
-  id        String        @id @default(uuid())
-  amount    Float
-  method    PaymentMethod
+  id                 String        @id @default(uuid())
+  amount             Float
+  method             PaymentMethod
+  paidAt             DateTime      @default(now())
+  invoiceId          String
   vnpayTransactionNo String?
-  paidAt    DateTime      @default(now())
-  invoiceId String
-  invoice   Invoice       @relation(fields: [invoiceId], references: [id])
+  invoice            Invoice       @relation(fields: [invoiceId], references: [id])
 }
 
 model Supplier {
@@ -158,13 +152,13 @@ model Supplier {
 }
 
 model Ingredient {
-  id           String             @id @default(uuid())
+  id           String               @id @default(uuid())
   name         String
   unit         String
-  currentStock Float              @default(0)
-  minStock     Float              @default(5)
-  transactions StockTransaction[]
+  currentStock Float                @default(0)
+  minStock     Float                @default(5)
   menuItems    MenuItemIngredient[]
+  transactions StockTransaction[]
 }
 
 model StockTransaction {
@@ -177,34 +171,49 @@ model StockTransaction {
   userId       String
   supplierId   String?
   ingredient   Ingredient      @relation(fields: [ingredientId], references: [id])
-  user         User            @relation(fields: [userId], references: [id])
   supplier     Supplier?       @relation(fields: [supplierId], references: [id])
+  user         User            @relation(fields: [userId], references: [id])
 }
 
 model Voucher {
-  id            String       @id @default(uuid())
-  code          String       @unique
-  description   String?
-  discountType  DiscountType @default(FIXED)
-  discountValue Float        // Giá trị giảm (tiền mặt hoặc %)
-  maxDiscount   Float?       // Giảm tối đa (cho loại %)
-  minOrderValue Float        @default(0) // Giá trị đơn tối thiểu để áp dụng
-  
-  usageLimit           Int?         // Tổng số lượt sử dụng tối đa (null = vô hạn)
-  usedCount            Int          @default(0)
-  maxUsagePerCustomer  Int?         // Số lần tối đa 1 khách được dùng (null = vô hạn)
-  
-  isActive      Boolean      @default(true)
-  startDate     DateTime?
-  endDate       DateTime?
-  
-  // Lưu các điều kiện dưới dạng JSON
-  // Ví dụ: { "type": "ORDER_COUNT", "min": 5 }
-  // Hoặc: { "type": "NEW_USER" }
-  conditions    Json?        @default("[]")
-  
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id                  String       @id @default(uuid())
+  code                String       @unique
+  description         String?
+  discountType        DiscountType @default(FIXED)
+  discountValue       Float
+  maxDiscount         Float?
+  minOrderValue       Float        @default(0)
+  usageLimit          Int?
+  usedCount           Int          @default(0)
+  isActive            Boolean      @default(true)
+  startDate           DateTime?
+  endDate             DateTime?
+  conditions          Json?        @default("[]")
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  maxUsagePerCustomer Int?
+}
+
+model ChatSession {
+  id        String    @id @default(uuid())
+  isActive  Boolean   @default(true)
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  tableId   String
+  table     Table     @relation(fields: [tableId], references: [id])
+  invoices  Invoice[]
+  messages  Message[]
+  orders    Order[]
+}
+
+model Message {
+  id            String      @id @default(uuid())
+  content       String
+  senderType    SenderType
+  senderId      String
+  createdAt     DateTime    @default(now())
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
 }
 
 enum Role {
@@ -255,10 +264,10 @@ enum OrderItemStatus {
 enum ReservationStatus {
   PENDING
   CONFIRMED
-  ARRIVED
   CANCELLED
   COMPLETED
   NO_SHOW
+  ARRIVED
 }
 
 enum DiscountType {
@@ -266,43 +275,7 @@ enum DiscountType {
   PERCENTAGE
 }
 
-// ==========================================
-// MODULE: CHAT REAL-TIME (ẨN DANH & RESET PHIÊN)
-// ==========================================
-
-// Quản lý Phiên Chat theo từng lượt khách
-model ChatSession {
-  id        String    @id @default(uuid())
-  
-  // Trạng thái Phiên: 
-  // - True: Đang mở (Khách đang ăn).
-  // - False: Đã thanh toán, khóa phiên lại.
-  isActive  Boolean   @default(true) 
-  startTime DateTime  @default(now())
-  endTime   DateTime?
-  tableId   String
-  table     Table     @relation(fields: [tableId], references: [id])
-  messages  Message[]
-  orders    Order[]
-  invoices  Invoice[]
-}
-
 enum SenderType {
   CUSTOMER
   STAFF
-}
-
-// Lưu trữ tin nhắn (Hoàn toàn ẩn danh với khách)
-model Message {
-  id            String      @id @default(uuid())
-  content       String      @db.Text
-  senderType    SenderType
-  
-  // Nơi chứa "Căn cước ẩn danh":
-  // - Nếu là Khách: Lưu cái mã `guestId` sinh ra từ JWT (VD: "guest_x8f9a")
-  // - Nếu là Nhân viên: Lưu ID của tài khoản nhân viên (VD: "user_123")
-  senderId      String      
-  createdAt     DateTime    @default(now())
-  chatSessionId String
-  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
 }

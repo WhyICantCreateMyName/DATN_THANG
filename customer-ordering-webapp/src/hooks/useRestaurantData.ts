@@ -26,7 +26,7 @@ export const useRestaurantData = (qrCode?: string) => {
     const [chatSessionId, setChatSessionId] = useState('');
     const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
     const [initialMessages, setInitialMessages] = useState([]);
-    const [statusNotification, setStatusNotification] = useState<{message: string, type: string} | null>(null);
+    const [statusNotification, setStatusNotification] = useState<{ message: string, type: string } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     // 1. Identify Table & Session
@@ -55,6 +55,14 @@ export const useRestaurantData = (qrCode?: string) => {
                     if (orders) {
                         setOrderHistory(orders);
                     }
+
+                    if (table && !chatSession) {
+                        const reloadKey = `reload_session_${table.id}`;
+                        if (!sessionStorage.getItem(reloadKey)) {
+                            sessionStorage.setItem(reloadKey, 'true');
+                            window.location.reload();
+                        }
+                    }
                 } else {
                     // Load from local storage if no QR
                     const storedName = localStorage.getItem('restaurant_table_name');
@@ -80,7 +88,7 @@ export const useRestaurantData = (qrCode?: string) => {
         if (!socket) return;
 
         const handleStatusUpdate = (data: { orderId: string, status: string, message: string }) => {
-            setOrderHistory(prev => prev.map(order => 
+            setOrderHistory(prev => prev.map(order =>
                 order.id === data.orderId ? { ...order, status: data.status } : order
             ));
 
@@ -89,7 +97,7 @@ export const useRestaurantData = (qrCode?: string) => {
         };
 
         socket.on('ORDER_STATUS_UPDATED', handleStatusUpdate);
-        
+
         // Listen for session end to cleanup
         socket.on('SESSION_ENDED', () => {
             localStorage.removeItem('restaurant_chat_session_id');

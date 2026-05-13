@@ -20,14 +20,18 @@ export const useSocket = () => {
                 console.log('📡 Socket connected to server:', socketInstance?.id);
                 socketInstance?.emit('join_staff_room');
             });
-            
+        }
+
+        // ĐẢM BẢO QUAN TRỌNG: 
+        // Luôn cập nhật state của component hiện tại nếu nó chưa đồng bộ với socketInstance toàn cục
+        if (socket !== socketInstance) {
             setSocket(socketInstance);
         }
 
         return () => {
             // Giữ kết nối cho staff
         };
-    }, []);
+    }, [socket]);
 
     return socket;
 };

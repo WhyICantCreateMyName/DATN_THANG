@@ -176,6 +176,10 @@ router.post('/orders', async (req: Request, res: Response) => {
             where: { tableId, isActive: true }
         });
 
+        if (!activeSession) {
+            return res.status(403).json({ error: 'Vui lòng quét mã QR tại bàn để bắt đầu đặt món.' });
+        }
+
         // 5. Tạo Order và OrderItems trong một Transaction
         const newOrder = await prisma.$transaction(async (tx) => {
             const order = await tx.order.create({
@@ -185,7 +189,7 @@ router.post('/orders', async (req: Request, res: Response) => {
                     totalAmount: subTotal,
                     discountAmount,
                     voucherCode: validatedVoucher ? validatedVoucher.code : null,
-                    chatSessionId: activeSession?.id || null,
+                    chatSessionId: activeSession.id,
                     status: 'WAITING_APPROVAL',
                     items: {
                         create: orderItemsData

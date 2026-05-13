@@ -7,21 +7,19 @@ import { useSocket } from '@/hooks/useSocket';
 import { orderService } from '@/services/order.service';
 import { tableService } from '@/services/table.service';
 import { reservationService, Reservation } from '@/services/reservation.service';
-import { useOrderContext } from '@/contexts/OrderContext';
+import { useNotificationContext } from '@/contexts/NotificationContext';
 
 export const usePOS = () => {
-    const { waitingOrders, mutateWaitingOrders } = useOrderContext();
+    const { waitingOrders, mutateWaitingOrders, unreadTableIds, markTableAsRead } = useNotificationContext();
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-    const [unreadTables, setUnreadTables] = useState<string[]>([]);
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
     const [vnpayUrl, setVnpayUrl] = useState<string | null>(null);
     const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
 
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-    const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
-    const socket = useSocket();
+    // Sử dụng unreadTableIds trực tiếp từ Context
+    const unreadTables = unreadTableIds;
 
-    // 1. Dữ liệu Bàn
+    const socket = useSocket();
     const { tables, isLoading: isTablesLoading, mutateTables, checkoutTable } = useTable();
 
     // 2. Đơn hàng của bàn đang chọn
@@ -46,28 +44,21 @@ export const usePOS = () => {
 
     const selectedTable = useMemo(() => tables?.find(t => t.id === selectedTableId), [tables, selectedTableId]);
 
-    // 5. Socket Logic
+    // 5. Socket Logic - CHỈ DÙNG ĐỂ FETCH LẠI DỮ LIỆU
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('staff_notification', (data: any) => {
-            if (data.type === 'NEW_MESSAGE' && data.tableId !== selectedTableId) {
-                setUnreadTables(prev => Array.from(new Set([...prev, data.tableId])));
-            }
-
+        socket.on('staff_notification', () => {
             mutateTables();
             mutateWaitingOrders();
             if (selectedTableId) mutateActiveOrders();
         });
 
-        // Lắng nghe sự kiện thanh toán thành công
         socket.on('PAYMENT_SUCCESS', (data: any) => {
-            console.log('Nhận thông báo thanh toán thành công:', data);
-            setIsPaymentSuccess(true); // Chuyển sang giao diện thành công
+            setIsPaymentSuccess(true);
             mutateTables();
             if (selectedTableId) mutateActiveOrders();
 
-            // Tự động đóng hoàn toàn sau 4 giây
             setTimeout(() => {
                 setVnpayUrl(null);
                 setIsPaymentSuccess(false);
@@ -96,16 +87,16 @@ export const usePOS = () => {
             // Cập nhật Optimistic (Cập nhật cache local ngay lập tức)
             mutateActiveOrders((currentOrders: any) => {
                 if (!currentOrders) return currentOrders;
-                return currentOrders.map((o: any) => 
+                return currentOrders.map((o: any) =>
                     o.id === id ? { ...o, status: status } : o
                 );
             }, false);
 
             await orderService.updateStatus(id, status);
-            
+
             // Sau khi thành công, re-fetch chuẩn
-            mutateActiveOrders(); 
-            mutateWaitingOrders(); 
+            mutateActiveOrders();
+            mutateWaitingOrders();
             mutateTables();
         } catch (error) {
             console.error('[POS] Lỗi khi cập nhật trạng thái:', error);
@@ -169,7 +160,7 @@ export const usePOS = () => {
 
     return {
         selectedTableId, setSelectedTableId,
-        unreadTables, setUnreadTables,
+        unreadTables, unreadTableIds, markTableAsRead,
         selectedOrderIds, toggleOrderSelection,
         vnpayUrl, setVnpayUrl,
         isPaymentSuccess, setIsPaymentSuccess,
@@ -177,7 +168,6 @@ export const usePOS = () => {
         activeOrders, isOrdersLoading,
         waitingOrders,
         selectedTable,
-        audioRef, notificationAudioRef,
         socket,
         handleApprove, handleCancel, handleUpdateStatus, handleCheckout, handleMoveOrder, handleMergeTables,
         calculateTotal,

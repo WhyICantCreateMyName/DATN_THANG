@@ -96,15 +96,34 @@ io.on('connection', (socket) => {
             });
 
             if (data.senderType === 'CUSTOMER') {
-                // Khách nhắn: Chỉ gửi lại cho chính người gửi và toàn bộ nhân viên
+                console.log('✉️ [Socket] Khách gửi tin nhắn:', data.tableId);
+
+                // Gửi lại cho chính người gửi và toàn bộ nhân viên ngay lập tức
                 socket.emit('receive_message', newMessage);
                 io.to('staff_room').emit('receive_message', newMessage);
-                
-                io.emit('staff_notification', {
-                    type: 'NEW_MESSAGE',
-                    tableId: data.tableId,
-                    message: `Bàn ${data.tableId} vừa gửi tin nhắn mới!`
-                });
+
+                // Gửi thông báo staff_notification (bọc try-catch để an toàn tuyệt đối)
+                try {
+                    const table = await prisma.table.findUnique({
+                        where: { id: data.tableId }
+                    });
+
+                    io.emit('staff_notification', {
+                        type: 'NEW_MESSAGE',
+                        tableId: data.tableId,
+                        tableName: table?.name || data.tableId,
+                        message: `Bàn ${table?.name || 'số...'} vừa gửi tin nhắn mới!`
+                    });
+                    console.log('📢 [Socket] Đã phát staff_notification cho tin nhắn');
+                } catch (err) {
+                    console.error('❌ [Socket] Lỗi khi gửi staff_notification:', err);
+                    // Vẫn phát thông báo kể cả khi lỗi tìm bàn
+                    io.emit('staff_notification', {
+                        type: 'NEW_MESSAGE',
+                        tableId: data.tableId,
+                        message: `Có tin nhắn mới từ bàn ${data.tableId}`
+                    });
+                }
             } else {
                 // Nhân viên nhắn: Gửi cho cả bàn (Khách sẽ tự lọc ở FE dựa trên senderId nếu cần, 
                 // nhưng STAFF nhắn thì ai ở bàn đó cũng nên thấy)
@@ -118,6 +137,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('call_staff', async (data: any) => {
+        console.log('🔔 Có yêu cầu gọi nhân viên từ bàn:', data.tableName);
         try {
             const newMessage = await prisma.message.create({
                 data: {
