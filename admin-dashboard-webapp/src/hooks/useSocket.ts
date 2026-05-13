@@ -9,7 +9,7 @@ export const useSocket = () => {
 
     useEffect(() => {
         if (!socketInstance) {
-            const socketUrl = constants.url.api.baseUrl;
+            const socketUrl = process.env.NODE_ENV === 'development' ? constants.url.api.development : constants.url.api.production;
 
             socketInstance = io(socketUrl, {
                 transports: ['websocket'],
@@ -22,8 +22,6 @@ export const useSocket = () => {
             });
         }
 
-        // ĐẢM BẢO QUAN TRỌNG: 
-        // Luôn cập nhật state của component hiện tại nếu nó chưa đồng bộ với socketInstance toàn cục
         if (socket !== socketInstance) {
             setSocket(socketInstance);
         }

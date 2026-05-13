@@ -25,6 +25,8 @@ export default function TableModule() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const qrRefs = useRef<{ [key: string]: SVGSVGElement | null }>({});
 
+    const clientUrl = process.env.NODE_ENV === 'development' ? constants.url.client.development : constants.url.client.production;
+
     // Sync SWR data to local state
     React.useEffect(() => {
         if (tables) {
@@ -278,7 +280,7 @@ export default function TableModule() {
                                         {table.qrCode ? (
                                             <>
                                                 <QRCodeSVG
-                                                    value={`${constants.url.client.baseUrl}${constants.url.client.order(table.qrCode)}`}
+                                                    value={`${clientUrl}${constants.url.client.order(table.qrCode)}`}
                                                     size={120}
                                                     level="M"
                                                     includeMargin={true}

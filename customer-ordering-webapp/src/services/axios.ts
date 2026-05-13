@@ -2,14 +2,13 @@ import axios from 'axios';
 import constants from '@/constants';
 
 const api = axios.create({
-    baseURL: constants.url.api.baseUrl,
+    baseURL: process.env.NODE_ENV === 'development' ? constants.url.api.development : constants.url.api.production,
     headers: {
         'Content-Type': 'application/json',
     },
-    withCredentials: true, 
+    withCredentials: true,
 });
 
-// Response Interceptor để xử lý lỗi tập trung
 api.interceptors.response.use(
     (response) => response,
     (error) => {

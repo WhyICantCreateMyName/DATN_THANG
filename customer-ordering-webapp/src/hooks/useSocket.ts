@@ -9,7 +9,11 @@ export const useSocket = () => {
 
     useEffect(() => {
         if (!socketInstance) {
-            socketInstance = io(constants.url.api.baseUrl);
+            const socketUrl = process.env.NODE_ENV === 'development' ? constants.url.api.development : constants.url.api.production;
+            socketInstance = io(socketUrl, {
+                transports: ['websocket'],
+                withCredentials: true
+            });
             setSocket(socketInstance);
         }
 

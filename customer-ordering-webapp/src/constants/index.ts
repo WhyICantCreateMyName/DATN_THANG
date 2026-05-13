@@ -1,7 +1,8 @@
 const constants = {
     url: {
         api: {
-            baseUrl: 'https://api.nhahang.website'
+            production: 'https://api.nhahang.website',
+            development: "http://localhost:4000",
         }
     },
     ROUTES: {

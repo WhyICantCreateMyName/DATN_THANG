@@ -19,7 +19,7 @@ async function deductStockForOrder(orderId: string, userId: string | null, tx: a
 
         // 2. Tìm một User ID hợp lệ làm fallback (ví dụ Admin đầu tiên)
         let finalUserId = userId || order?.waiterId;
-        
+
         if (!finalUserId) {
             const firstAdmin = await tx.user.findFirst({
                 where: { role: 'ADMIN' },
@@ -80,7 +80,7 @@ async function deductStockForOrder(orderId: string, userId: string | null, tx: a
         console.error('Lỗi khi khấu hao kho tự động:', error);
         // Ném lỗi ra để Transaction cha biết mà Rollback nếu cần, 
         // hoặc bắt lại nếu muốn tiếp tục nhưng ở đây nên để nó báo lỗi rõ ràng.
-        throw error; 
+        throw error;
     }
 }
 
@@ -138,7 +138,7 @@ router.post('/orders', async (req: Request, res: Response) => {
                 // Kiểm tra điều kiện cơ bản
                 const now = new Date();
                 const isTimed = (!validatedVoucher.startDate || now >= validatedVoucher.startDate) &&
-                                (!validatedVoucher.endDate || now <= validatedVoucher.endDate);
+                    (!validatedVoucher.endDate || now <= validatedVoucher.endDate);
                 const isUnderLimit = !validatedVoucher.usageLimit || validatedVoucher.usedCount < validatedVoucher.usageLimit;
                 const isMinOrderMet = subTotal >= validatedVoucher.minOrderValue;
 
@@ -216,7 +216,7 @@ router.post('/orders', async (req: Request, res: Response) => {
 
         // 5. Gửi thông báo tự động vào Chat (nếu có phiên chat)
         if (activeSession) {
-            const { getIO } = require('../socket'); 
+            const { getIO } = require('../socket');
             const io = getIO();
 
             const systemMsg = await prisma.message.create({
@@ -291,6 +291,14 @@ router.get('/orders', async (req: Request, res: Response) => {
                 waiter: true
             },
             orderBy: { createdAt: 'desc' }
+        });
+        const host = `${req.protocol}://${req.headers.host}`;
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                if (item.menuItem.imageUrl && !item.menuItem.imageUrl.startsWith('http')) {
+                    item.menuItem.imageUrl = `${host}${item.menuItem.imageUrl}`;
+                }
+            });
         });
         res.status(200).json(orders);
     } catch (error) {
