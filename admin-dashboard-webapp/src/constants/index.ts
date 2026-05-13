@@ -2,11 +2,11 @@ export default {
     url: {
         api: {
             // baseUrl: "/api"
-            baseUrl: "http://localhost:4000",
+            baseUrl: "https://api.nhahang.website",
         },
         client: {
             // baseUrl: "http://192.168.0.102:4000",
-            baseUrl: "http://localhost:3001",
+            baseUrl: "https://www.nhahang.website",
             order: (qrCode: string) => `/menu/${qrCode}`
         }
     },

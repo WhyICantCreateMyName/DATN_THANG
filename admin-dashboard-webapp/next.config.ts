@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  allowedDevOrigins: ['https://ql.nhahang.website']
 };
 
 export default nextConfig;
