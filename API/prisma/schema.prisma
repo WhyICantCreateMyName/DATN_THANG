@@ -245,6 +245,7 @@ enum PaymentMethod {
   TRANSFER
   VNPAY
   MOMO
+  E_WALLET
 }
 
 enum TransactionType {
