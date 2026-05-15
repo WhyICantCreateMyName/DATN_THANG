@@ -5,6 +5,7 @@ import moment from 'moment';
 import qs from 'qs';
 import { getIO } from '../socket';
 import { createVNPayUrl, verifyVNPayReturn } from '../utils/vnpay';
+import { createMomoUrl, verifyMomoSignature } from '../utils/momo';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -25,11 +26,18 @@ router.post('/payment/vnpay/create-url', async (req: Request, res: Response) => 
         }
 
         const ipAddrRaw = req.headers['x-forwarded-for'] ||
-            req.connection.remoteAddress ||
-            req.socket.remoteAddress ||
+            req.socket?.remoteAddress ||
             '127.0.0.1';
 
-        const ipAddr = (Array.isArray(ipAddrRaw) ? ipAddrRaw[0] : String(ipAddrRaw)) || '127.0.0.1';
+        let ipAddr = (Array.isArray(ipAddrRaw) ? ipAddrRaw[0] : String(ipAddrRaw).split(',')[0]) || '127.0.0.1';
+        ipAddr = ipAddr.trim();
+        if (ipAddr.includes('::ffff:')) {
+            ipAddr = ipAddr.replace('::ffff:', '');
+        }
+        // VNPay chỉ hỗ trợ IPv4
+        if (ipAddr.includes(':') || ipAddr === '::1') {
+            ipAddr = '127.0.0.1';
+        }
 
         const orderInfo = `Thanh toan hoa don ban ${invoice.table?.name || 'N/A'}`;
         const amount = invoice.finalAmount;
@@ -40,13 +48,54 @@ router.post('/payment/vnpay/create-url', async (req: Request, res: Response) => 
         // Cập nhật phương thức thanh toán cho hóa đơn
         await prisma.invoice.update({
             where: { id: invoiceId },
-            data: { paymentMethod: 'E_WALLET' }
+            data: { paymentMethod: 'VNPAY' }
         });
 
         res.status(200).json({ url: paymentUrl });
     } catch (error) {
         console.error('Create VNPay URL Error:', error);
         res.status(500).json({ error: 'Lỗi khi tạo URL thanh toán' });
+    }
+});
+
+// 2. Tạo URL thanh toán MoMo
+router.post('/payment/momo/create-url', async (req: Request, res: Response) => {
+    try {
+        const { invoiceId, redirectUrl } = req.body;
+
+        const invoice = await prisma.invoice.findUnique({
+            where: { id: invoiceId },
+            include: { table: true }
+        });
+
+        if (!invoice) {
+            return res.status(404).json({ error: 'Không tìm thấy hóa đơn' });
+        }
+
+        const orderInfo = `Thanh toan hoa don ban ${invoice.table?.name || 'N/A'}`;
+        const amount = invoice.finalAmount;
+
+        const result = await createMomoUrl({
+            orderId: `${invoice.id}_${Date.now()}`, // MoMo yêu cầu orderId duy nhất mỗi lần tạo
+            amount,
+            orderInfo,
+            extraData: Buffer.from(JSON.stringify({ invoiceId })).toString('base64'),
+            redirectUrl
+        });
+
+        if (result.resultCode === 0) {
+            // Cập nhật phương thức thanh toán
+            await prisma.invoice.update({
+                where: { id: invoiceId },
+                data: { paymentMethod: 'MOMO' }
+            });
+            res.status(200).json({ url: result.payUrl });
+        } else {
+            res.status(400).json({ error: result.message || 'Lỗi khi tạo URL MoMo' });
+        }
+    } catch (error) {
+        console.error('Create MoMo URL Error:', error);
+        res.status(500).json({ error: 'Lỗi khi kết nối với MoMo' });
     }
 });
 
@@ -90,7 +139,7 @@ router.get('/payment/vnpay/callback', async (req: Request, res: Response) => {
                 await tx.payment.create({
                     data: {
                         amount: amount,
-                        method: 'E_WALLET',
+                        method: 'VNPAY',
                         vnpayTransactionNo: vnpayTranNo,
                         invoiceId: invoiceId
                     }
@@ -151,6 +200,170 @@ router.get('/payment/vnpay/callback', async (req: Request, res: Response) => {
     } catch (error) {
         console.error('VNPay Callback Error:', error);
         res.status(500).send('Đã có lỗi xảy ra trong quá trình xử lý thanh toán.');
+    }
+});
+
+// 4. VNPay IPN (Dành cho máy chủ VNPay gọi trực tiếp - Quan trọng để đảm bảo cập nhật trạng thái)
+router.get('/payment/vnpay/ipn', async (req: Request, res: Response) => {
+    try {
+        let vnp_Params: any = { ...req.query };
+        const isValid = verifyVNPayReturn(vnp_Params);
+        const responseCode = vnp_Params['vnp_ResponseCode'];
+        const invoiceId = vnp_Params['vnp_TxnRef'];
+        const vnpayTranNo = vnp_Params['vnp_TransactionNo'];
+        const amount = Number(vnp_Params['vnp_Amount']) / 100;
+
+        if (isValid) {
+            const invoice = await prisma.invoice.findUnique({
+                where: { id: invoiceId },
+                include: { orders: true }
+            });
+
+            if (!invoice) {
+                return res.status(200).json({ RspCode: '01', Message: 'Order not found' });
+            }
+
+            // Kiểm tra số tiền (Tránh gian lận)
+            if (invoice.finalAmount !== amount) {
+                return res.status(200).json({ RspCode: '04', Message: 'Invalid amount' });
+            }
+
+            // Kiểm tra trạng thái hóa đơn (Đã thanh toán chưa)
+            if (invoice.isPaid) {
+                return res.status(200).json({ RspCode: '02', Message: 'Order already confirmed' });
+            }
+
+            if (responseCode === '00') {
+                // Giao dịch thành công
+                await prisma.$transaction(async (tx) => {
+                    await tx.invoice.update({
+                        where: { id: invoiceId },
+                        data: { isPaid: true }
+                    });
+
+                    await tx.payment.create({
+                        data: {
+                            amount: amount,
+                            method: 'VNPAY',
+                            vnpayTransactionNo: vnpayTranNo,
+                            invoiceId: invoiceId
+                        }
+                    });
+
+                    await tx.order.updateMany({
+                        where: { id: { in: invoice.orders.map(o => o.id) } },
+                        data: { status: 'COMPLETED' }
+                    });
+
+                    // Logic đóng phiên tương tự callback
+                    const remaining = await tx.order.count({
+                        where: {
+                            chatSessionId: invoice.chatSessionId,
+                            status: { in: ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'] }
+                        }
+                    });
+
+                    if (remaining === 0 && invoice.chatSessionId) {
+                        await tx.chatSession.update({
+                            where: { id: invoice.chatSessionId },
+                            data: { isActive: false, endTime: new Date() }
+                        });
+                        await tx.table.update({
+                            where: { id: invoice.tableId },
+                            data: { status: 'AVAILABLE' }
+                        });
+                    }
+                });
+
+                const io = getIO();
+                if (io) {
+                    io.to(`table_${invoice.tableId}`).emit('PAYMENT_SUCCESS', { invoiceId });
+                    io.emit('staff_notification', { type: 'TABLE_UPDATED' });
+                }
+
+                return res.status(200).json({ RspCode: '00', Message: 'Success' });
+            } else {
+                return res.status(200).json({ RspCode: '00', Message: 'Success' }); // Thông báo cho VNPay là đã nhận IPN lỗi
+            }
+        } else {
+            return res.status(200).json({ RspCode: '97', Message: 'Invalid Checksum' });
+        }
+    } catch (error) {
+        console.error('VNPay IPN Error:', error);
+        res.status(200).json({ RspCode: '99', Message: 'Unknown error' });
+    }
+});
+
+// 5. MoMo IPN (Dành cho máy chủ MoMo gọi trực tiếp)
+router.post('/payment/momo/ipn', async (req: Request, res: Response) => {
+    console.log('--- MoMo IPN Received ---', req.body);
+    try {
+        const isValid = verifyMomoSignature(req.body);
+        if (!isValid) {
+            return res.status(400).json({ message: 'Invalid signature' });
+        }
+
+        const { resultCode, extraData, transId, amount } = req.body;
+        if (resultCode === 0 && extraData) {
+            const { invoiceId } = JSON.parse(Buffer.from(extraData, 'base64').toString());
+
+            const invoice = await prisma.invoice.findUnique({
+                where: { id: invoiceId },
+                include: { orders: true }
+            });
+
+            if (invoice && !invoice.isPaid) {
+                await prisma.$transaction(async (tx) => {
+                    await tx.invoice.update({
+                        where: { id: invoiceId },
+                        data: { isPaid: true }
+                    });
+
+                    await tx.payment.create({
+                        data: {
+                            amount: Number(amount),
+                            method: 'MOMO',
+                            invoiceId: invoiceId
+                            // MoMo transId có thể lưu vào một field khác nếu có
+                        }
+                    });
+
+                    await tx.order.updateMany({
+                        where: { id: { in: invoice.orders.map(o => o.id) } },
+                        data: { status: 'COMPLETED' }
+                    });
+
+                    // Logic đóng phiên
+                    const remaining = await tx.order.count({
+                        where: {
+                            chatSessionId: invoice.chatSessionId,
+                            status: { in: ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'] }
+                        }
+                    });
+
+                    if (remaining === 0 && invoice.chatSessionId) {
+                        await tx.chatSession.update({
+                            where: { id: invoice.chatSessionId },
+                            data: { isActive: false, endTime: new Date() }
+                        });
+                        await tx.table.update({
+                            where: { id: invoice.tableId },
+                            data: { status: 'AVAILABLE' }
+                        });
+                    }
+                });
+
+                const io = getIO();
+                if (io) {
+                    io.to(`table_${invoice.tableId}`).emit('PAYMENT_SUCCESS', { invoiceId });
+                    io.emit('staff_notification', { type: 'TABLE_UPDATED' });
+                }
+            }
+        }
+        res.status(204).send();
+    } catch (error) {
+        console.error('MoMo IPN Error:', error);
+        res.status(500).send();
     }
 });
 

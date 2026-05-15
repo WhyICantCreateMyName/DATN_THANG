@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Receipt, Wallet, CreditCard } from 'lucide-react';
+import { Receipt, Wallet, CreditCard, QrCode } from 'lucide-react';
 
 interface CheckoutPanelProps {
     totals: {
@@ -46,22 +46,30 @@ export default function CheckoutPanel({ totals, canCheckout, onCheckout, isParti
                 </div>
 
                 {finalTotal > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="grid grid-cols-3 gap-2 mb-4">
                         <button 
                             onClick={() => setMethod('CASH')}
-                            className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all
-                                ${method === 'CASH' ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'}
+                            className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest flex flex-col items-center justify-center gap-1.5 transition-all
+                                ${method === 'CASH' ? 'border-gray-900 bg-gray-900 text-white shadow-lg shadow-gray-200' : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'}
                             `}
                         >
                             <Wallet className="w-4 h-4" /> Tiền mặt
                         </button>
                         <button 
-                            onClick={() => setMethod('E_WALLET')}
-                            className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all
-                                ${method === 'E_WALLET' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'}
+                            onClick={() => setMethod('VNPAY')}
+                            className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest flex flex-col items-center justify-center gap-1.5 transition-all
+                                ${method === 'VNPAY' ? 'border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200' : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'}
                             `}
                         >
-                            <CreditCard className="w-4 h-4" /> VNPay (QR)
+                            <QrCode className="w-4 h-4" /> VNPay QR
+                        </button>
+                        <button 
+                            onClick={() => setMethod('MOMO')}
+                            className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest flex flex-col items-center justify-center gap-1.5 transition-all
+                                ${method === 'MOMO' ? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200' : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'}
+                            `}
+                        >
+                            <CreditCard className="w-4 h-4" /> MoMo
                         </button>
                     </div>
                 )}
@@ -71,11 +79,16 @@ export default function CheckoutPanel({ totals, canCheckout, onCheckout, isParti
                     disabled={!canCheckout}
                     onClick={() => onCheckout(method)}
                     className={`flex-1 py-5 text-white rounded-[1.5rem] font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl disabled:opacity-50 disabled:grayscale active:scale-[0.98]
-                        ${method === 'E_WALLET' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20' : (isPartial ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20')}
+                        ${method === 'VNPAY' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 
+                          method === 'MOMO' ? 'bg-pink-500 hover:bg-pink-600 shadow-pink-500/20' : 
+                          (isPartial ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20')}
                     `}
                 >
                     <Receipt className="w-6 h-6" />
-                    {finalTotal === 0 ? 'DỌN BÀN & KẾT THÚC' : (method === 'E_WALLET' ? 'THANH TOÁN VNPAY' : (isPartial ? 'THANH TOÁN ĐƠN ĐÃ CHỌN' : 'TÍNH TIỀN & DỌN BÀN'))}
+                    {finalTotal === 0 ? 'DỌN BÀN & KẾT THÚC' : 
+                     (method === 'VNPAY' ? 'THANH TOÁN VNPAY' : 
+                      method === 'MOMO' ? 'THANH TOÁN MOMO' : 
+                      (isPartial ? 'THANH TOÁN ĐƠN ĐÃ CHỌN' : 'TÍNH TIỀN & DỌN BÀN'))}
                 </button>
             </div>
         </div>

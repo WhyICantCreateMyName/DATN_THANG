@@ -7,7 +7,7 @@ import OrderPanel from './parts/OrderPanel';
 import CheckoutPanel from './parts/CheckoutPanel';
 import OrderActions from './parts/OrderActions';
 import ChatPanel from './parts/ChatPanel';
-import VNPAYQRModal from './parts/VNPAYQRModal';
+import PaymentQRModal from './parts/PaymentQRModal';
 import { useSearchParams } from 'next/navigation';
 import { LayoutGrid } from 'lucide-react';
 
@@ -19,7 +19,8 @@ export default function POSModule() {
         selectedTableId, setSelectedTableId,
         unreadTables, markTableAsRead,
         selectedOrderIds, toggleOrderSelection,
-        vnpayUrl, setVnpayUrl,
+        paymentUrl, setPaymentUrl,
+        paymentMethod, setPaymentMethod,
         isPaymentSuccess,
         tables, isTablesLoading,
         activeOrders, isOrdersLoading,
@@ -47,7 +48,7 @@ export default function POSModule() {
     }, [tableIdFromUrl, setSelectedTableId]);
 
     const hasNewOrder = (id: string) => waitingOrders.some(o => o.tableId === id);
-    console.log("vnpay url", vnpayUrl);
+    console.log("payment url", paymentUrl);
 
     return (
         <div className="flex h-[calc(100vh-160px)] gap-6 overflow-hidden">
@@ -120,13 +121,14 @@ export default function POSModule() {
                 )}
             </div>
 
-            {/* Modal hiển thị mã QR VNPay */}
-            {vnpayUrl && (
-                <VNPAYQRModal
-                    url={vnpayUrl}
-                    onClose={() => setVnpayUrl(null)}
+            {/* Modal hiển thị mã QR Thanh toán */}
+            {paymentUrl && (
+                <PaymentQRModal
+                    url={paymentUrl}
+                    onClose={() => setPaymentUrl(null)}
                     tableName={selectedTable?.name}
                     isSuccess={isPaymentSuccess}
+                    method={paymentMethod === 'MOMO' ? 'MOMO' : 'VNPAY'}
                 />
             )}
         </div>

@@ -28,7 +28,8 @@ export const usePOS = () => {
     const setSelectedTableId = setActiveTableId;
     
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
-    const [vnpayUrl, setVnpayUrl] = useState<string | null>(null);
+    const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'VNPAY' | 'MOMO' | 'CASH' | 'CARD'>('CASH');
 
     // 2. Đơn hàng của bàn đang chọn
     const {
@@ -93,16 +94,22 @@ export const usePOS = () => {
 
         console.log(paymentMethod, result)
 
-        if (paymentMethod === 'E_WALLET' && result?.invoiceId) {
+        if ((paymentMethod === 'VNPAY' || paymentMethod === 'MOMO') && result?.invoiceId) {
             try {
-                const payRes = await api.post('/payment/vnpay/create-url', { invoiceId: result.invoiceId });
-                console.log('Response từ server sau khi tạo URL VNPay:', payRes.data);
+                const endpoint = paymentMethod === 'VNPAY' ? '/payment/vnpay/create-url' : '/payment/momo/create-url';
+                const payRes = await api.post(endpoint, { 
+                    invoiceId: result.invoiceId,
+                    // Đối với MoMo có thể cần thêm redirectUrl
+                    redirectUrl: window.location.origin + '/payment-result'
+                });
+
                 if (payRes.data.url) {
                     setIsPaymentSuccess(false);
-                    setVnpayUrl(payRes.data.url);
+                    setPaymentMethod(paymentMethod);
+                    setPaymentUrl(payRes.data.url);
                 }
             } catch (error) {
-                console.error('Lỗi tạo thanh toán VNPay:', error);
+                console.error(`Lỗi tạo thanh toán ${paymentMethod}:`, error);
             }
         }
 
@@ -147,7 +154,8 @@ export const usePOS = () => {
         selectedTableId, setSelectedTableId,
         unreadTables: unreadTableIds, unreadTableIds, markTableAsRead,
         selectedOrderIds, toggleOrderSelection,
-        vnpayUrl, setVnpayUrl,
+        paymentUrl, setPaymentUrl,
+        paymentMethod, setPaymentMethod,
         isPaymentSuccess, setIsPaymentSuccess,
         tables, isTablesLoading,
         activeOrders: activeOrders || [], isOrdersLoading,

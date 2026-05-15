@@ -129,7 +129,10 @@ export default function ReportModule() {
                     subTotal: inv.subTotal,
                     discount: inv.discount,
                     final: inv.finalAmount,
-                    method: inv.paymentMethod === 'CASH' ? 'Tiền mặt' : inv.paymentMethod === 'VNPAY' ? 'Chuyển khoản' : 'Ví điện tử'
+                    method: inv.paymentMethod === 'CASH' ? 'Tiền mặt' : 
+                    inv.paymentMethod === 'VNPAY' ? 'VNPay' :
+                    inv.paymentMethod === 'MOMO' ? 'MoMo' : 
+                    inv.paymentMethod === 'TRANSFER' ? 'Chuyển khoản' : 'Thanh toán thẻ',
                 });
                 row.eachCell((cell, colNumber) => {
                     cell.border = borderStyle;
@@ -161,8 +164,9 @@ export default function ReportModule() {
             const statsData = [
                 ['THỐNG KÊ PHƯƠNG THỨC', '', ''],
                 ['Số lượng tiền mặt:', '', { formula: `COUNTIF(H4:H${lastDataRow}, "Tiền mặt")`, result: 0 }],
+                ['Số lượng VNPay:', '', { formula: `COUNTIF(H4:H${lastDataRow}, "VNPay")`, result: 0 }],
+                ['Số lượng MoMo:', '', { formula: `COUNTIF(H4:H${lastDataRow}, "MoMo")`, result: 0 }],
                 ['Số lượng chuyển khoản:', '', { formula: `COUNTIF(H4:H${lastDataRow}, "Chuyển khoản")`, result: 0 }],
-                ['Số lượng ví điện tử:', '', { formula: `COUNTIF(H4:H${lastDataRow}, "Ví điện tử")`, result: 0 }]
             ];
             statsData.forEach((s, i) => {
                 const r = worksheet.addRow(s);

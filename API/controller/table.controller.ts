@@ -157,7 +157,7 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
             );
 
             const { paymentMethod = 'CASH', orderIds } = req.body;
-            const isEWallet = paymentMethod === 'E_WALLET' || paymentMethod === 'TRANSFER';
+            const isEWallet = paymentMethod === 'VNPAY' || paymentMethod === 'MOMO' || paymentMethod === 'TRANSFER';
 
             if (orderIds && Array.isArray(orderIds) && orderIds.length > 0) {
                 ordersToPay = ordersToPay.filter(o => orderIds.includes(o.id));

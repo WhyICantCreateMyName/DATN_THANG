@@ -5,14 +5,37 @@ import { QRCodeSVG } from 'qrcode.react';
 import { X, CreditCard, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface VNPAYQRModalProps {
+interface PaymentQRModalProps {
     url: string;
     onClose: () => void;
     tableName?: string;
     isSuccess?: boolean;
+    method?: 'VNPAY' | 'MOMO';
 }
 
-export default function VNPAYQRModal({ url, onClose, tableName, isSuccess }: VNPAYQRModalProps) {
+export default function PaymentQRModal({ url, onClose, tableName, isSuccess, method = 'VNPAY' }: PaymentQRModalProps) {
+    const isMomo = method === 'MOMO';
+    
+    // Theme config based on method
+    const themes = {
+        VNPAY: {
+            bg: 'bg-gradient-to-r from-blue-600 to-indigo-700',
+            accent: 'text-blue-600',
+            qrColor: '#1e3a8a',
+            label: 'VNPay QR',
+            desc: 'Sử dụng ứng dụng Ngân hàng hoặc Ví VNPAY để quét mã.'
+        },
+        MOMO: {
+            bg: 'bg-gradient-to-r from-pink-500 to-rose-600',
+            accent: 'text-pink-600',
+            qrColor: '#ae2070',
+            label: 'MoMo QR',
+            desc: 'Sử dụng ứng dụng Ví MoMo để quét mã thanh toán.'
+        }
+    };
+
+    const currentTheme = themes[method];
+
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -23,7 +46,7 @@ export default function VNPAYQRModal({ url, onClose, tableName, isSuccess }: VNP
                     className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden relative"
                 >
                     {/* Header */}
-                    <div className={`p-8 text-white relative transition-colors duration-500 ${isSuccess ? 'bg-green-500' : 'bg-gradient-to-r from-blue-600 to-indigo-700'}`}>
+                    <div className={`p-8 text-white relative transition-colors duration-500 ${isSuccess ? 'bg-green-500' : currentTheme.bg}`}>
                         {!isSuccess && (
                             <button
                                 onClick={onClose}
@@ -37,12 +60,12 @@ export default function VNPAYQRModal({ url, onClose, tableName, isSuccess }: VNP
                                 {isSuccess ? (
                                     <ShieldCheck className="w-6 h-6 text-green-500" />
                                 ) : (
-                                    <CreditCard className="w-6 h-6 text-blue-600" />
+                                    <CreditCard className={`w-6 h-6 ${currentTheme.accent}`} />
                                 )}
                             </div>
                             <div>
                                 <h3 className="text-xl font-black uppercase tracking-tight">
-                                    {isSuccess ? 'Thành công!' : 'Thanh toán VNPay'}
+                                    {isSuccess ? 'Thành công!' : `Thanh toán ${currentTheme.label}`}
                                 </h3>
                                 <p className="text-white/80 text-sm font-medium">Bàn {tableName || 'N/A'}</p>
                             </div>
@@ -67,13 +90,13 @@ export default function VNPAYQRModal({ url, onClose, tableName, isSuccess }: VNP
                                             level="M"
                                             includeMargin={false}
                                             className="rounded-lg"
-                                            fgColor="#1e3a8a"
+                                            fgColor={currentTheme.qrColor}
                                         />
                                     </div>
                                     <div className="text-center space-y-4">
                                         <p className="text-gray-900 font-bold text-lg leading-tight">Quét mã để thanh toán</p>
                                         <p className="text-gray-500 text-sm max-w-[240px] mx-auto font-medium">
-                                            Sử dụng ứng dụng Ngân hàng hoặc Ví VNPAY để quét mã QR phía trên.
+                                            {currentTheme.desc}
                                         </p>
                                     </div>
                                     <div className="mt-10 flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full text-xs font-bold uppercase tracking-wider">

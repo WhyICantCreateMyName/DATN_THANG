@@ -12,7 +12,7 @@ export function sortObject(obj: any): any {
 
     for (const key of keys) {
         const value = obj[key];
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && value !== '') {
             const encodedKey = encodeURIComponent(key);
             const encodedValue = encodeURIComponent(String(value)).replace(/%20/g, '+');
             sorted[encodedKey] = encodedValue;
@@ -23,15 +23,8 @@ export function sortObject(obj: any): any {
 
 export function createVNPayUrl(txnRef: string, amount: number, orderInfo: string, ipAddr: string): string {
     const date = new Date();
-
-    // Tạo chuỗi YYYYMMDDHHmmss từ giờ địa phương (Việt Nam)
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const createDate = date.getFullYear() +
-        pad(date.getMonth() + 1) +
-        pad(date.getDate()) +
-        pad(date.getHours()) +
-        pad(date.getMinutes()) +
-        pad(date.getSeconds());
+    // Sử dụng cách tạo ngày giống dự án đang chạy (ISO String)
+    const createDate = date.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
 
     let vnpParams: any = {
         vnp_Version: '2.1.0',
@@ -48,21 +41,17 @@ export function createVNPayUrl(txnRef: string, amount: number, orderInfo: string
         vnp_CreateDate: createDate,
     };
 
-    console.log('--- VNPAY PARAMS BEFORE SORT ---', vnpParams);
-
     vnpParams = sortObject(vnpParams);
-
     const signData = qs.stringify(vnpParams, { encode: false });
     const hmac = crypto.createHmac('sha512', VNPAY_HASH_SECRET);
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 
-    vnpParams.vnp_SecureHash = signed;
-
+    vnpParams['vnp_SecureHash'] = signed;
     const paymentUrl = VNPAY_URL + '?' + qs.stringify(vnpParams, { encode: false });
 
-    console.log('--- VNPAY DEBUG ---');
-    console.log('Final URL:', paymentUrl);
+    console.log('--- VNPAY DEBUG (GIỐNG DỰ ÁN MẪU) ---');
     console.log('SignData:', signData);
+    console.log('Final URL:', paymentUrl);
 
     return paymentUrl;
 }
