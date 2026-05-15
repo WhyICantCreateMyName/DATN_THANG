@@ -46,15 +46,8 @@ export default function POSModule() {
         }
     }, [tableIdFromUrl, setSelectedTableId]);
 
-    // LOG DEBUG: Theo dõi ID bàn và thông báo
-    useEffect(() => {
-        if (tables && tables.length > 0) {
-            console.log('%c🔍 [POS Debug] Danh sách ID bàn hiện có:', 'color: #3b82f6; font-weight: bold;', tables.map((t: any) => t.id));
-            console.log('%c🔴 [POS Debug] Các bàn đang có thông báo (Unread):', 'color: #ef4444; font-weight: bold;', unreadTables);
-        }
-    }, [tables, unreadTables]);
-
     const hasNewOrder = (id: string) => waitingOrders.some(o => o.tableId === id);
+    console.log("vnpay url", vnpayUrl);
 
     return (
         <div className="flex h-[calc(100vh-160px)] gap-6 overflow-hidden">
@@ -106,7 +99,7 @@ export default function POSModule() {
                             <CheckoutPanel
                                 totals={calculateTotal()}
                                 canCheckout={selectedTable.status === 'OCCUPIED'}
-                                onCheckout={handleCheckout}
+                                onCheckout={(method: string) => handleCheckout(method)}
                                 isPartial={selectedOrderIds.length > 0}
                             />
                         </div>

@@ -91,9 +91,12 @@ export const usePOS = () => {
         const ids = selectedOrderIds.length > 0 ? selectedOrderIds : undefined;
         const result = await tableService.checkoutTable(selectedTableId, ids, paymentMethod);
 
-        if (paymentMethod === 'E_WALLET' && result?.data?.invoiceId) {
+        console.log(paymentMethod, result)
+
+        if (paymentMethod === 'E_WALLET' && result?.invoiceId) {
             try {
-                const payRes = await api.post('/payment/vnpay/create-url', { invoiceId: result.data.invoiceId });
+                const payRes = await api.post('/payment/vnpay/create-url', { invoiceId: result.invoiceId });
+                console.log('Response từ server sau khi tạo URL VNPay:', payRes.data);
                 if (payRes.data.url) {
                     setIsPaymentSuccess(false);
                     setVnpayUrl(payRes.data.url);

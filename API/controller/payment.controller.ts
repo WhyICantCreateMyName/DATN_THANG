@@ -11,6 +11,7 @@ const prisma = new PrismaClient();
 
 // 1. Tạo URL thanh toán
 router.post('/payment/vnpay/create-url', async (req: Request, res: Response) => {
+    console.log(`[API] Tạo URL thanh toán VNPay - Request từ: ${req.ip} - Origin: ${req.headers.origin}`);
     try {
         const { invoiceId, bankCode } = req.body;
 
