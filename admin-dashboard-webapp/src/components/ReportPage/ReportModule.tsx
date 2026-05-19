@@ -399,7 +399,7 @@ export default function ReportModule() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${inv.paymentMethod === 'VNPAY' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
-                                                {inv.paymentMethod === 'VNPAY' ? 'VNPay' : 'Tiền mặt'}
+                                                {inv.paymentMethod === 'VNPAY' ? 'VNPay' : inv.paymentMethod === 'MOMO' ? 'MoMo' : inv.paymentMethod === 'TRANSFER' ? 'Chuyển khoản' : inv.paymentMethod === 'CARD' ? 'Thanh toán thẻ' : inv.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Tiền mặt'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
