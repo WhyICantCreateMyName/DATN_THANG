@@ -34,7 +34,7 @@ export default function CheckoutPanel({ totals, canCheckout, onCheckout, isParti
                         <div className="h-px bg-gray-200 my-2" />
                     </>
                 )}
-                
+
                 <div className="flex justify-between items-center mb-4">
                     <div>
                         <span className="font-black text-gray-400 uppercase tracking-widest text-lg block">TỔNG CỘNG</span>
@@ -47,7 +47,7 @@ export default function CheckoutPanel({ totals, canCheckout, onCheckout, isParti
 
                 {finalTotal > 0 && (
                     <div className="grid grid-cols-3 gap-2 mb-4">
-                        <button 
+                        <button
                             onClick={() => setMethod('CASH')}
                             className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest flex flex-col items-center justify-center gap-1.5 transition-all
                                 ${method === 'CASH' ? 'border-gray-900 bg-gray-900 text-white shadow-lg shadow-gray-200' : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'}
@@ -55,7 +55,7 @@ export default function CheckoutPanel({ totals, canCheckout, onCheckout, isParti
                         >
                             <Wallet className="w-4 h-4" /> Tiền mặt
                         </button>
-                        <button 
+                        <button
                             onClick={() => setMethod('VNPAY')}
                             className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest flex flex-col items-center justify-center gap-1.5 transition-all
                                 ${method === 'VNPAY' ? 'border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200' : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'}
@@ -63,7 +63,7 @@ export default function CheckoutPanel({ totals, canCheckout, onCheckout, isParti
                         >
                             <QrCode className="w-4 h-4" /> VNPay QR
                         </button>
-                        <button 
+                        <button
                             onClick={() => setMethod('MOMO')}
                             className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest flex flex-col items-center justify-center gap-1.5 transition-all
                                 ${method === 'MOMO' ? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200' : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'}
@@ -75,20 +75,20 @@ export default function CheckoutPanel({ totals, canCheckout, onCheckout, isParti
                 )}
             </div>
             <div className="flex gap-4">
-                <button 
+                <button
                     disabled={!canCheckout}
                     onClick={() => onCheckout(method)}
                     className={`flex-1 py-5 text-white rounded-[1.5rem] font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl disabled:opacity-50 disabled:grayscale active:scale-[0.98]
-                        ${method === 'VNPAY' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 
-                          method === 'MOMO' ? 'bg-pink-500 hover:bg-pink-600 shadow-pink-500/20' : 
-                          (isPartial ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20')}
+                        ${method === 'VNPAY' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' :
+                            method === 'MOMO' ? 'bg-pink-500 hover:bg-pink-600 shadow-pink-500/20' :
+                                (isPartial ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20')}
                     `}
                 >
                     <Receipt className="w-6 h-6" />
-                    {finalTotal === 0 ? 'DỌN BÀN & KẾT THÚC' : 
-                     (method === 'VNPAY' ? 'THANH TOÁN VNPAY' : 
-                      method === 'MOMO' ? 'THANH TOÁN MOMO' : 
-                      (isPartial ? 'THANH TOÁN ĐƠN ĐÃ CHỌN' : 'TÍNH TIỀN & DỌN BÀN'))}
+                    {finalTotal === 0 ? 'DỌN BÀN & KẾT THÚC' :
+                        (method === 'VNPAY' ? 'THANH TOÁN VNPAY' :
+                            method === 'MOMO' ? 'THANH TOÁN MOMO' :
+                                (isPartial ? 'THANH TOÁN ĐƠN ĐÃ CHỌN' : 'TÍNH TIỀN & DỌN BÀN'))}
                 </button>
             </div>
         </div>

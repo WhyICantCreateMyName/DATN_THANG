@@ -129,10 +129,10 @@ export default function ReportModule() {
                     subTotal: inv.subTotal,
                     discount: inv.discount,
                     final: inv.finalAmount,
-                    method: inv.paymentMethod === 'CASH' ? 'Tiền mặt' : 
-                    inv.paymentMethod === 'VNPAY' ? 'VNPay' :
-                    inv.paymentMethod === 'MOMO' ? 'MoMo' : 
-                    inv.paymentMethod === 'TRANSFER' ? 'Chuyển khoản' : 'Thanh toán thẻ',
+                    method: inv.paymentMethod === 'CASH' ? 'Tiền mặt' :
+                        inv.paymentMethod === 'VNPAY' ? 'VNPay' :
+                            inv.paymentMethod === 'MOMO' ? 'MoMo' :
+                                inv.paymentMethod === 'TRANSFER' ? 'Chuyển khoản' : 'Thanh toán thẻ',
                 });
                 row.eachCell((cell, colNumber) => {
                     cell.border = borderStyle;
@@ -320,7 +320,10 @@ export default function ReportModule() {
                             >
                                 <option value="">Tất cả</option>
                                 <option value="CASH">Tiền mặt</option>
-                                <option value="VNPAY">Chuyển khoản</option>
+                                <option value="VNPAY">VNPay</option>
+                                <option value="MOMO">MoMo</option>
+                                <option value="TRANSFER">Chuyển khoản</option>
+                                <option value="CARD">Thanh toán thẻ</option>
                             </select>
                         </div>
                     </div>
