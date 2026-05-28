@@ -86,28 +86,6 @@ export const usePOS = () => {
         }
     };
 
-    // Lưu trữ thông tin đơn hàng hiện tại trước khi checkout (để in hóa đơn phòng khi bị xóa/mutate)
-    const checkoutContextRef = useRef<{
-        tableName: string;
-        orders: any[];
-        totals: { subTotal: number; totalDiscount: number; finalTotal: number };
-        paymentMethod: string;
-    } | null>(null);
-
-    // Lắng nghe trạng thái thanh toán online thành công để tự động in hóa đơn
-    useEffect(() => {
-        if (isPaymentSuccess && checkoutContextRef.current) {
-            printInvoice({
-                tableName: checkoutContextRef.current.tableName,
-                orders: checkoutContextRef.current.orders,
-                totals: checkoutContextRef.current.totals,
-                paymentMethod: paymentMethod // Dùng đúng phương thức online VNPAY/MOMO hiện tại
-            });
-            // Reset context sau khi in
-            checkoutContextRef.current = null;
-        }
-    }, [isPaymentSuccess, paymentMethod]);
-
     const handleCheckout = async (paymentMethod: string = 'CASH') => {
         if (!selectedTableId || !selectedTable) return;
         
@@ -120,13 +98,13 @@ export const usePOS = () => {
         
         const totalsToPrint = calculateTotal();
 
-        // Lưu thông tin phục vụ việc in
-        checkoutContextRef.current = {
+        // 1. Tự động in hóa đơn ngay lập tức cho tất cả phương thức thanh toán
+        printInvoice({
             tableName: selectedTable.name,
             orders: ordersToPrint,
             totals: totalsToPrint,
             paymentMethod
-        };
+        });
 
         const result = await tableService.checkoutTable(selectedTableId, ids, paymentMethod);
 
@@ -141,18 +119,11 @@ export const usePOS = () => {
                 });
 
                 if (payRes.data.url) {
-                    setIsPaymentSuccess(false);
-                    setPaymentMethod(paymentMethod);
-                    setPaymentUrl(payRes.data.url);
+                    // 2. Mở cổng thanh toán (trang chứa mã QR) ở tab mới thay vì mở modal
+                    window.open(payRes.data.url, '_blank');
                 }
             } catch (error) {
                 console.error(`Lỗi tạo thanh toán ${paymentMethod}:`, error);
-            }
-        } else if (paymentMethod === 'CASH') {
-            // Thanh toán tiền mặt thành công trực tiếp -> In hóa đơn ngay lập tức
-            if (checkoutContextRef.current) {
-                printInvoice(checkoutContextRef.current);
-                checkoutContextRef.current = null;
             }
         }
 
