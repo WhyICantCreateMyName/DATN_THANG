@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack -p 6688",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 6688",
     "lint": "eslint"
   },
   "dependencies": {

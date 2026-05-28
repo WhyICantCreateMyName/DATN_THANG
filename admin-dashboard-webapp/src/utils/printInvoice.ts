@@ -142,8 +142,8 @@ export const printInvoice = (data: PrintInvoiceData) => {
         </head>
         <body>
             <div class="center">
-                <div class="title uppercase">NHÀ HÀNG DATN THẮNG</div>
-                <div class="subtitle">ĐC: 123 Đường ABC, Hà Nội<br>ĐT: 0987.654.321</div>
+                <div class="title uppercase">THẮNG RESTAURANT</div>
+                <div class="subtitle">ĐC: 575 Phạm Văn Đồng, phường Cổ Nhuế 1, Bắc Từ Liêm, Hà Nội<br>ĐT: 0987.654.321</div>
                 <div class="bold uppercase" style="font-size: 14px; margin-top: 5px;">HÓA ĐƠN THANH TOÁN</div>
                 <div style="font-size: 10px;">Mã HĐ: ${invoiceCode}</div>
             </div>

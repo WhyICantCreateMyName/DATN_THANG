@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 9977 --webpack",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build --webpack",
+    "start": "next start -p 9977",
     "lint": "eslint"
   },
   "dependencies": {

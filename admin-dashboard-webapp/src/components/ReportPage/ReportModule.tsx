@@ -15,10 +15,13 @@ import {
     Download,
     ChevronRight,
     Table as TableIcon,
-    RefreshCw
+    RefreshCw,
+    Eye,
+    EyeIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Pagination from '@/components/ui/Pagination';
+import { printInvoice } from '@/utils/printInvoice';
 
 export default function ReportModule() {
     const [filters, setFilters] = useState({
@@ -355,7 +358,7 @@ export default function ReportModule() {
                                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">Ngày giờ</th>
                                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">Tổng tiền</th>
                                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">Phương thức</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 text-right">Hành động</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 text-right">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -403,8 +406,21 @@ export default function ReportModule() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                                                <ChevronRight className="w-5 h-5" />
+                                            <button
+                                                onClick={() => printInvoice({
+                                                    tableName: inv.table?.name || 'N/A',
+                                                    orders: inv.orders || [],
+                                                    totals: {
+                                                        subTotal: inv.subTotal || inv.finalAmount,
+                                                        totalDiscount: inv.discount || 0,
+                                                        finalTotal: inv.finalAmount
+                                                    },
+                                                    paymentMethod: inv.paymentMethod
+                                                })}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                title="Xem và In hóa đơn"
+                                            >
+                                                <EyeIcon className="w-5 h-5" />
                                             </button>
                                         </td>
                                     </tr>

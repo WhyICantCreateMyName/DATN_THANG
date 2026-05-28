@@ -68,7 +68,8 @@ router.get('/invoices', async (req: Request, res: Response) => {
                             items: {
                                 select: {
                                     quantity: true,
-                                    menuItem: { select: { name: true } }
+                                    priceAtTime: true,
+                                    menuItem: { select: { name: true, price: true } }
                                 }
                             }
                         }

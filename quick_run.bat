@@ -46,10 +46,10 @@ echo Starting all applications in separate windows...
 start "Backend (API) - Port 4000" cmd /c "cd API && npm run dev"
 
 :: Admin
-start "Admin Dashboard - Port 3001" cmd /c "cd admin-dashboard-webapp && npm run dev"
+start "Admin Dashboard - Port 9977" cmd /c "cd admin-dashboard-webapp && npm run start"
 
 :: Customer
-start "Customer App - Port 3000" cmd /c "cd customer-ordering-webapp && npm run dev"
+start "Customer App - Port 6688" cmd /c "cd customer-ordering-webapp && npm run start"
 
 echo.
 echo All projects are starting! Please check the new windows for logs.
