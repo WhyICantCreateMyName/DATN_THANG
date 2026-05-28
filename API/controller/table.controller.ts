@@ -152,7 +152,7 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                 throw new Error('Không tìm thấy phiên hoạt động cho bàn này');
             }
 
-            let ordersToPay = activeSession.orders.filter(o => 
+            let ordersToPay = activeSession.orders.filter(o =>
                 ['PENDING', 'COOKING', 'READY', 'SERVED', 'WAITING_APPROVAL'].includes(o.status)
             );
 
@@ -163,16 +163,21 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                 ordersToPay = ordersToPay.filter(o => orderIds.includes(o.id));
             }
 
-            let totalAmount = 0;
+            let totalSubTotal = 0;
+            let totalDiscount = 0;
+            let finalAmount = 0;
             let invoiceId = null;
 
             if (ordersToPay.length > 0) {
-                totalAmount = ordersToPay.reduce((sum, o) => sum + o.totalAmount, 0);
+                totalSubTotal = ordersToPay.reduce((sum, o) => sum + o.totalAmount, 0);
+                totalDiscount = ordersToPay.reduce((sum, o) => sum + (o.discountAmount || 0), 0);
+                finalAmount = Math.max(0, totalSubTotal - totalDiscount);
 
                 const invoice = await tx.invoice.create({
                     data: {
-                        subTotal: totalAmount,
-                        finalAmount: totalAmount,
+                        subTotal: totalSubTotal,
+                        discount: totalDiscount,
+                        finalAmount: finalAmount,
                         tableId: String(id),
                         chatSessionId: activeSession.id,
                         isPaid: !isEWallet, // Nếu là điện tử thì chưa trả
@@ -188,7 +193,7 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                 if (!isEWallet) {
                     await tx.payment.create({
                         data: {
-                            amount: totalAmount,
+                            amount: finalAmount,
                             method: paymentMethod as any,
                             invoiceId: invoice.id
                         }
@@ -224,10 +229,10 @@ router.post('/tables/:id/checkout', async (req: Request, res: Response) => {
                 }
             }
 
-            return { 
-                message: isFullyPaid ? 'Bàn đã được đóng' : (isEWallet ? 'Yêu cầu thanh toán điện tử đã được tạo' : 'Thanh toán một phần thành công'), 
-                invoiceId, 
-                total: totalAmount,
+            return {
+                message: isFullyPaid ? 'Bàn đã được đóng' : (isEWallet ? 'Yêu cầu thanh toán điện tử đã được tạo' : 'Thanh toán một phần thành công'),
+                invoiceId,
+                total: finalAmount,
                 isFullyPaid,
                 paymentMethod
             };
