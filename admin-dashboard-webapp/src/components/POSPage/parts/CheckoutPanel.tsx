@@ -86,9 +86,9 @@ export default function CheckoutPanel({ totals, canCheckout, onCheckout, isParti
                 >
                     <Receipt className="w-6 h-6" />
                     {finalTotal === 0 ? 'DỌN BÀN & KẾT THÚC' :
-                        (method === 'VNPAY' ? 'THANH TOÁN VNPAY' :
-                            method === 'MOMO' ? 'THANH TOÁN MOMO' :
-                                (isPartial ? 'THANH TOÁN ĐƠN ĐÃ CHỌN' : 'TÍNH TIỀN & DỌN BÀN'))}
+                        (method === 'VNPAY' ? 'THANH TOÁN VNPAY & IN HÓA ĐƠN' :
+                            method === 'MOMO' ? 'THANH TOÁN MOMO & IN HÓA ĐƠN' :
+                                (isPartial ? 'THANH TOÁN & IN HÓA ĐƠN ĐƠN ĐÃ CHỌN' : 'THANH TOÁN & IN HÓA ĐƠN'))}
                 </button>
             </div>
         </div>

@@ -8,6 +8,7 @@ import { orderService } from '@/services/order.service';
 import { tableService } from '@/services/table.service';
 import { reservationService, Reservation } from '@/services/reservation.service';
 import { useNotificationContext } from '@/contexts/NotificationContext';
+import { printInvoice } from '@/utils/printInvoice';
 
 export const usePOS = () => {
     const { 
@@ -85,21 +86,57 @@ export const usePOS = () => {
         }
     };
 
+    // Lưu trữ thông tin đơn hàng hiện tại trước khi checkout (để in hóa đơn phòng khi bị xóa/mutate)
+    const checkoutContextRef = useRef<{
+        tableName: string;
+        orders: any[];
+        totals: { subTotal: number; totalDiscount: number; finalTotal: number };
+        paymentMethod: string;
+    } | null>(null);
+
+    // Lắng nghe trạng thái thanh toán online thành công để tự động in hóa đơn
+    useEffect(() => {
+        if (isPaymentSuccess && checkoutContextRef.current) {
+            printInvoice({
+                tableName: checkoutContextRef.current.tableName,
+                orders: checkoutContextRef.current.orders,
+                totals: checkoutContextRef.current.totals,
+                paymentMethod: paymentMethod // Dùng đúng phương thức online VNPAY/MOMO hiện tại
+            });
+            // Reset context sau khi in
+            checkoutContextRef.current = null;
+        }
+    }, [isPaymentSuccess, paymentMethod]);
+
     const handleCheckout = async (paymentMethod: string = 'CASH') => {
         if (!selectedTableId || !selectedTable) return;
-        const { checkoutTable } = tableService; // Dùng trực tiếp service hoặc hook
         
         const ids = selectedOrderIds.length > 0 ? selectedOrderIds : undefined;
+        
+        // Trích xuất orders và totals cần in trước khi gọi checkout và bị mutate
+        const ordersToPrint = selectedOrderIds.length > 0
+            ? (activeOrders || []).filter(o => selectedOrderIds.includes(o.id))
+            : (activeOrders || []);
+        
+        const totalsToPrint = calculateTotal();
+
+        // Lưu thông tin phục vụ việc in
+        checkoutContextRef.current = {
+            tableName: selectedTable.name,
+            orders: ordersToPrint,
+            totals: totalsToPrint,
+            paymentMethod
+        };
+
         const result = await tableService.checkoutTable(selectedTableId, ids, paymentMethod);
 
-        console.log(paymentMethod, result)
+        console.log(paymentMethod, result);
 
         if ((paymentMethod === 'VNPAY' || paymentMethod === 'MOMO') && result?.invoiceId) {
             try {
                 const endpoint = paymentMethod === 'VNPAY' ? '/payment/vnpay/create-url' : '/payment/momo/create-url';
                 const payRes = await api.post(endpoint, { 
                     invoiceId: result.invoiceId,
-                    // Đối với MoMo có thể cần thêm redirectUrl
                     redirectUrl: window.location.origin + '/payment-result'
                 });
 
@@ -110,6 +147,12 @@ export const usePOS = () => {
                 }
             } catch (error) {
                 console.error(`Lỗi tạo thanh toán ${paymentMethod}:`, error);
+            }
+        } else if (paymentMethod === 'CASH') {
+            // Thanh toán tiền mặt thành công trực tiếp -> In hóa đơn ngay lập tức
+            if (checkoutContextRef.current) {
+                printInvoice(checkoutContextRef.current);
+                checkoutContextRef.current = null;
             }
         }
 
