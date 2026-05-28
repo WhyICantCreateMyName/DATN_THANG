@@ -10,16 +10,19 @@ echo ======================================================
 echo.
 echo  [1] Run EVERYTHING (Start Docker Services + 3 Apps)
 echo  [2] Run APPS + Local MinIO (No Docker)
-echo  [3] Stop Docker Services
-echo  [4] Exit
+echo  [3] Build Web Applications (Admin & Customer)
+echo  [4] Stop Docker Services
+echo  [5] Exit
 echo.
 echo ======================================================
-set /p choice="Enter your choice (1-4): "
+echo.
+set /p choice="Enter your choice (1-5): "
 
 if "%choice%"=="1" goto RUN_ALL
 if "%choice%"=="2" goto RUN_APPS_LOCAL
-if "%choice%"=="3" goto STOP_DOCKER
-if "%choice%"=="4" goto EXIT
+if "%choice%"=="3" goto BUILD_APPS
+if "%choice%"=="4" goto STOP_DOCKER
+if "%choice%"=="5" goto EXIT
 goto MENU
 
 :RUN_APPS_LOCAL
@@ -55,6 +58,26 @@ echo.
 echo All projects are starting! Please check the new windows for logs.
 timeout /t 5
 goto EXIT
+
+:BUILD_APPS
+echo.
+echo ======================================================
+echo    BUILDING WEB APPLICATIONS (PRODUCTION BUILD)
+echo ======================================================
+echo.
+echo [1/2] Building Admin Dashboard Webapp...
+cd admin-dashboard-webapp
+call npm run build
+cd ..
+echo.
+echo [2/2] Building Customer Ordering Webapp...
+cd customer-ordering-webapp
+call npm run build
+cd ..
+echo.
+echo All builds completed successfully!
+pause
+goto MENU
 
 :STOP_DOCKER
 echo.
