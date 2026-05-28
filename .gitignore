@@ -20,6 +20,6 @@ minio_storage/
 # Bỏ qua file môi trường
 .env
 
-.txt
-.vpp
-.docx
+*.txt
+*.vpp
+*.docx
