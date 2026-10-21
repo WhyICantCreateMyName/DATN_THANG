@@ -18,8 +18,14 @@ echo [1/3] Dang xoa Volume cu va khoi tao lai Docker Containers...
 cd API
 docker compose down -v
 docker compose up -d
-echo Cho 8 giay de PostgreSQL khoi tao xong...
-timeout /t 8
+echo Cho PostgreSQL khoi tao va san sang ket noi...
+:WAIT_PG
+docker exec restaurant_db pg_isready -U postgres >nul 2>&1
+if %errorlevel% neq 0 (
+    ping 127.0.0.1 -n 2 >nul
+    goto WAIT_PG
+)
+echo PostgreSQL da san sang!
 echo.
 echo [2/3] Dong bo cau truc Database (Prisma push)...
 call npx prisma generate

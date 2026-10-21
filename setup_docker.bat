@@ -16,8 +16,14 @@ echo [2/4] Setting up Backend (API)...
 cd API
 call npm install
 call npx prisma generate
-echo Waiting for Database to be ready...
-timeout /t 8
+echo Cho PostgreSQL khoi tao va san sang ket noi...
+:WAIT_PG
+docker exec restaurant_db pg_isready -U postgres >nul 2>&1
+if %errorlevel% neq 0 (
+    ping 127.0.0.1 -n 2 >nul
+    goto WAIT_PG
+)
+echo PostgreSQL da san sang!
 call npx prisma db push
 echo Seeding database...
 call npx prisma db seed
