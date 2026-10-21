@@ -7,7 +7,8 @@ echo ======================================================
 echo.
 echo [1/4] Starting Docker Containers (Postgres, MinIO)...
 cd API
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 cd ..
 
 echo.
@@ -16,7 +17,7 @@ cd API
 call npm install
 call npx prisma generate
 echo Waiting for Database to be ready...
-timeout /t 5
+timeout /t 8
 call npx prisma db push
 echo Seeding database...
 call npx prisma db seed

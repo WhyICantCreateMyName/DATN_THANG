@@ -37,7 +37,7 @@ goto RUN_APPS
 echo.
 echo Starting Docker services in API folder...
 cd API
-docker-compose up -d
+docker compose up -d
 cd ..
 goto RUN_APPS
 
@@ -83,7 +83,7 @@ goto MENU
 echo.
 echo Stopping Docker services...
 cd API
-docker-compose down
+docker compose down
 cd ..
 echo Done.
 pause

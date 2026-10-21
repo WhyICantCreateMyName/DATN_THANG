@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { PrismaClient, Role, TableStatus, TransactionType, DiscountType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
