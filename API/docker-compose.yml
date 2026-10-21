@@ -4,7 +4,7 @@ services:
     container_name: restaurant_db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: '123456'
       POSTGRES_DB: restaurant_db
     ports:
       - "5433:5432"
@@ -18,7 +18,7 @@ services:
       - "9001:9001" # Port để truy cập giao diện web quản lý
     environment:
       MINIO_ROOT_USER: admin # Tài khoản đăng nhập
-      MINIO_ROOT_PASSWORD: 12345678 # Mật khẩu (>8 ký tự)
+      MINIO_ROOT_PASSWORD: '12345678' # Mật khẩu (>8 ký tự)
     volumes:
       - minio_data:/data # Ánh xạ dữ liệu ra ngoài để không mất ảnh khi tắt Docker
     command: server /data --console-address ":9001"
