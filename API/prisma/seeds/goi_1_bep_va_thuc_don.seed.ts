@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { PrismaClient } from '@prisma/client';
 
 export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
@@ -887,3 +890,12 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
     console.log(`  ✅ Đã thiết lập ${totalRecipes} liên kết công thức định mức trừ kho`);
     console.log('🎉 [GÓI 1] Hoàn tất nạp dữ liệu Bếp & Thực đơn thành công!\n');
 }
+
+// Tự kích hoạt khi chạy lẻ trực tiếp bằng tsx
+if (require.main === module || process.argv[1]?.includes('goi_1_bep_va_thuc_don')) {
+    const prisma = new PrismaClient();
+    seedGoi1BepVaThucDon(prisma)
+        .catch(console.error)
+        .finally(() => prisma.$disconnect());
+}
+

@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { PrismaClient, Role, TableStatus, DiscountType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -208,3 +211,12 @@ export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
     console.log(`  ✅ Đã tạo ${vouchersData.length} mã voucher khuyến mãi đa dạng`);
     console.log('🎉 [GÓI 2] Hoàn tất nạp dữ liệu Đối tác & Khách hàng thành công!\n');
 }
+
+// Tự kích hoạt khi chạy lẻ trực tiếp bằng tsx
+if (require.main === module || process.argv[1]?.includes('goi_2_doi_tac_va_khach_hang')) {
+    const prisma = new PrismaClient();
+    seedGoi2DoiTacVaKhachHang(prisma)
+        .catch(console.error)
+        .finally(() => prisma.$disconnect());
+}
+
