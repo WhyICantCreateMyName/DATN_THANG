@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import { PrismaClient } from '@prisma/client';
 
 export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
@@ -890,25 +887,3 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
     console.log(`  ✅ Đã thiết lập ${totalRecipes} liên kết công thức định mức trừ kho`);
     console.log('🎉 [GÓI 1] Hoàn tất nạp dữ liệu Bếp & Thực đơn thành công!\n');
 }
-
-// Chạy trực tiếp độc lập khi gọi file này (npm run seed:goi1 hoặc npx tsx ...)
-if (require.main === module || process.argv[1]?.replace(/\\/g, '/').endsWith('goi_1_bep_va_thuc_don.seed.ts')) {
-    const standalonePrisma = new PrismaClient();
-    (async () => {
-        try {
-            console.log('🧹 [GÓI 1 STANDALONE] Đang dọn dẹp dữ liệu cũ của Bếp & Thực đơn...');
-            await standalonePrisma.orderItem.deleteMany();
-            await standalonePrisma.menuItemIngredient.deleteMany();
-            await standalonePrisma.menuItem.deleteMany();
-            await standalonePrisma.ingredient.deleteMany();
-            await standalonePrisma.category.deleteMany();
-            await seedGoi1BepVaThucDon(standalonePrisma);
-        } catch (e) {
-            console.error('❌ Lỗi khi chạy Gói 1:', e);
-            process.exit(1);
-        } finally {
-            await standalonePrisma.$disconnect();
-        }
-    })();
-}
-

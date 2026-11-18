@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import { PrismaClient, Role, TableStatus, DiscountType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -211,31 +208,3 @@ export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
     console.log(`  ✅ Đã tạo ${vouchersData.length} mã voucher khuyến mãi đa dạng`);
     console.log('🎉 [GÓI 2] Hoàn tất nạp dữ liệu Đối tác & Khách hàng thành công!\n');
 }
-
-// Chạy trực tiếp độc lập khi gọi file này (npm run seed:goi2 hoặc npx tsx ...)
-if (require.main === module || process.argv[1]?.replace(/\\/g, '/').endsWith('goi_2_doi_tac_va_khach_hang.seed.ts')) {
-    const standalonePrisma = new PrismaClient();
-    (async () => {
-        try {
-            console.log('🧹 [GÓI 2 STANDALONE] Đang dọn dẹp dữ liệu cũ của Đối tác & Khách hàng...');
-            await standalonePrisma.stockTransaction.deleteMany();
-            await standalonePrisma.order.deleteMany();
-            await standalonePrisma.invoice.deleteMany();
-            await standalonePrisma.message.deleteMany();
-            await standalonePrisma.chatSession.deleteMany();
-            await standalonePrisma.reservation.deleteMany();
-            await standalonePrisma.supplier.deleteMany();
-            await standalonePrisma.voucher.deleteMany();
-            await standalonePrisma.table.deleteMany();
-            await standalonePrisma.user.deleteMany();
-            await standalonePrisma.customer.deleteMany();
-            await seedGoi2DoiTacVaKhachHang(standalonePrisma);
-        } catch (e) {
-            console.error('❌ Lỗi khi chạy Gói 2:', e);
-            process.exit(1);
-        } finally {
-            await standalonePrisma.$disconnect();
-        }
-    })();
-}
-
