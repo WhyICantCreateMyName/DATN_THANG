@@ -4,25 +4,36 @@ dotenv.config();
 import { PrismaClient } from '@prisma/client';
 
 export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
-    console.log('🍳 [GÓI 1] Đang khởi tạo Danh mục, 70+ Nguyên liệu chuẩn bếp Việt & 60 Món ăn...');
+    console.log('🍳 [GÓI 1 - BỔ SUNG] Đang nạp thêm Danh mục, Nguyên liệu & Thực đơn vào hệ thống...');
 
     // ==========================================
-    // 1. TẠO CÁC DANH MỤC THEO PHƯƠNG PHÁP CHẾ BIẾN
+    // 1. TẠO HOẶC CẬP NHẬT DANH MỤC THEO CÁCH CHẾ BIẾN (UPSERT - KHÔNG XÓA STARTER)
     // ==========================================
-    const catGoi = await prisma.category.create({ data: { name: 'Khai vị & Gỏi / Nộm' } });
-    const catXao = await prisma.category.create({ data: { name: 'Món Xào' } });
-    const catChien = await prisma.category.create({ data: { name: 'Món Chiên & Rán' } });
-    const catNuong = await prisma.category.create({ data: { name: 'Món Nướng' } });
-    const catHap = await prisma.category.create({ data: { name: 'Món Hấp & Luộc' } });
-    const catKho = await prisma.category.create({ data: { name: 'Món Kho & Om' } });
-    const catLau = await prisma.category.create({ data: { name: 'Món Canh & Lẩu' } });
-    const catDoUong = await prisma.category.create({ data: { name: 'Đồ Uống & Bia' } });
-    const catTrangMieng = await prisma.category.create({ data: { name: 'Món Tráng Miệng' } });
+    const categoryNames = [
+        'Khai vị & Gỏi / Nộm',
+        'Món Xào',
+        'Món Chiên & Rán',
+        'Món Nướng',
+        'Món Hấp & Luộc',
+        'Món Kho & Om',
+        'Món Canh & Lẩu',
+        'Đồ Uống & Bia',
+        'Món Tráng Miệng',
+    ];
 
-    console.log('  ✅ Đã tạo 9 danh mục theo phương pháp chế biến');
+    const categoryMap: Record<string, string> = {};
+    for (const name of categoryNames) {
+        const cat = await prisma.category.upsert({
+            where: { name },
+            update: {},
+            create: { name },
+        });
+        categoryMap[name] = cat.id;
+    }
+    console.log(`  ✅ Đã đảm bảo tồn tại ${categoryNames.length} danh mục theo phương pháp chế biến`);
 
     // ==========================================
-    // 2. TẠO 70+ NGUYÊN LIỆU KHO THEO 8 NHÓM
+    // 2. NẠP 70+ NGUYÊN LIỆU KHO BẾP VIỆT (AN TOÀN - KHÔNG TRÙNG LẶP)
     // ==========================================
     const ingredientsData = [
         // Nhóm 1: Gia vị khô & lỏng cơ bản
@@ -120,21 +131,22 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
 
     const ingredientMap: Record<string, string> = {};
     for (const item of ingredientsData) {
-        const created = await prisma.ingredient.create({ data: item });
-        ingredientMap[item.name] = created.id;
+        let ing = await prisma.ingredient.findFirst({ where: { name: item.name } });
+        if (!ing) {
+            ing = await prisma.ingredient.create({ data: item });
+        }
+        ingredientMap[item.name] = ing.id;
     }
-
-    console.log(`  ✅ Đã tạo ${ingredientsData.length} nguyên liệu kho chuẩn bếp Việt`);
+    console.log(`  ✅ Đã đồng bộ ${ingredientsData.length} nguyên liệu kho chuẩn bếp Việt`);
 
     // ==========================================
-    // 3. TẠO 60 MÓN ĂN & CÔNG THỨC ĐỊNH MỨC
+    // 3. NẠP 60 MÓN ĂN & CÔNG THỨC ĐỊNH MỨC (NẾU CHƯA CÓ)
     // ==========================================
-
     interface MenuItemSeed {
         name: string;
         price: number;
         description: string;
-        categoryId: string;
+        categoryName: string;
         ingredients?: { name: string; quantity: number }[];
     }
 
@@ -144,7 +156,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Nộm bò bóp thấu hoa chuối',
             price: 75000,
             description: 'Thịt bò tái chanh trộn hoa chuối, đậu phộng rang, rau răm chua ngọt',
-            categoryId: catGoi.id,
+            categoryName: 'Khai vị & Gỏi / Nộm',
             ingredients: [
                 { name: 'Thịt thăn bò', quantity: 150 },
                 { name: 'Chanh tươi', quantity: 2 },
@@ -157,7 +169,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Gỏi gà xé phay hành tây',
             price: 70000,
             description: 'Gà ta luộc xé sợi trộn hành tây giòn, rau răm và tiêu ớt chua ngọt',
-            categoryId: catGoi.id,
+            categoryName: 'Khai vị & Gỏi / Nộm',
             ingredients: [
                 { name: 'Thịt gà ta', quantity: 200 },
                 { name: 'Hành tím ta', quantity: 30 },
@@ -170,7 +182,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Gỏi tôm thịt ngó sen',
             price: 80000,
             description: 'Tôm sú tươi và thịt ba chỉ luộc trộn ngó sen giòn mát chua ngọt',
-            categoryId: catGoi.id,
+            categoryName: 'Khai vị & Gỏi / Nộm',
             ingredients: [
                 { name: 'Tôm sú tươi', quantity: 100 },
                 { name: 'Thịt ba chỉ heo', quantity: 80 },
@@ -183,7 +195,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Khoai tây chiên bơ tỏi',
             price: 45000,
             description: 'Khoai tây cắt que chiên giòn rụm xóc đều với bơ lạt và tỏi phi thơm',
-            categoryId: catGoi.id,
+            categoryName: 'Khai vị & Gỏi / Nộm',
             ingredients: [
                 { name: 'Khoai tây', quantity: 200 },
                 { name: 'Bơ lạt', quantity: 25 },
@@ -195,7 +207,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Bánh mì bơ tỏi nướng giòn',
             price: 35000,
             description: 'Bánh mì quét bơ tỏi ngò rí nướng vàng giòn thơm lừng',
-            categoryId: catGoi.id,
+            categoryName: 'Khai vị & Gỏi / Nộm',
             ingredients: [
                 { name: 'Bơ lạt', quantity: 30 },
                 { name: 'Tỏi củ', quantity: 20 },
@@ -206,7 +218,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Nem hải sản phô mai chiên xù',
             price: 65000,
             description: 'Nem cuốn tôm mực kèm phô mai Mozzarella béo ngậy lăn bột chiên xù',
-            categoryId: catGoi.id,
+            categoryName: 'Khai vị & Gỏi / Nộm',
             ingredients: [
                 { name: 'Tôm sú tươi', quantity: 80 },
                 { name: 'Mực ống tươi', quantity: 60 },
@@ -221,7 +233,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Thịt bò xào măng tây bơ tỏi',
             price: 135000,
             description: 'Bò mềm xào lửa lớn với măng tây xanh mướt, bơ lạt thơm lừng',
-            categoryId: catXao.id,
+            categoryName: 'Món Xào',
             ingredients: [
                 { name: 'Thịt thăn bò', quantity: 180 },
                 { name: 'Bơ lạt', quantity: 20 },
@@ -234,7 +246,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Mực ống xào cần tỏi ớt chuông',
             price: 145000,
             description: 'Mực ống tươi giòn ngọt xào cùng cần tây, hành tây, tỏi và tiêu đen',
-            categoryId: catXao.id,
+            categoryName: 'Món Xào',
             ingredients: [
                 { name: 'Mực ống tươi', quantity: 250 },
                 { name: 'Tỏi củ', quantity: 20 },
@@ -247,7 +259,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Rau muống xào tỏi xanh giòn',
             price: 40000,
             description: 'Rau muống non nhặt sạch xào lửa to với nhiều tỏi thơm giòn',
-            categoryId: catXao.id,
+            categoryName: 'Món Xào',
             ingredients: [
                 { name: 'Rau muống', quantity: 300 },
                 { name: 'Tỏi củ', quantity: 30 },
@@ -260,7 +272,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Bò lúc lắc khoai tây áp chảo',
             price: 130000,
             description: 'Thịt bò cắt vuông vắn ướp xì dầu dầu hào xào cùng ớt chuông, khoai chiên',
-            categoryId: catXao.id,
+            categoryName: 'Món Xào',
             ingredients: [
                 { name: 'Thịt thăn bò', quantity: 180 },
                 { name: 'Khoai tây', quantity: 100 },
@@ -273,7 +285,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Bạch tuộc xào sa tế cay giòn',
             price: 125000,
             description: 'Bạch tuộc tươi giòn sần sật sốt sa tế tôm cay nồng đậm vị',
-            categoryId: catXao.id,
+            categoryName: 'Món Xào',
             ingredients: [
                 { name: 'Bạch tuộc tươi', quantity: 250 },
                 { name: 'Sa tế tôm', quantity: 25 },
@@ -286,7 +298,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Mì xào giòn hải sản rau củ',
             price: 95000,
             description: 'Mì trứng chiên phồng phủ sốt hải sản tôm mực và rau củ xào đậm đà',
-            categoryId: catXao.id,
+            categoryName: 'Món Xào',
             ingredients: [
                 { name: 'Mì trứng sợi', quantity: 2 },
                 { name: 'Tôm sú tươi', quantity: 80 },
@@ -302,7 +314,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Cánh gà chiên nước mắm tỏi ớt',
             price: 85000,
             description: 'Cánh gà vàng giòn rim quyện sốt nước mắm tỏi ớt mặn ngọt đưa cơm',
-            categoryId: catChien.id,
+            categoryName: 'Món Chiên & Rán',
             ingredients: [
                 { name: 'Cánh gà tươi', quantity: 300 },
                 { name: 'Nước mắm truyền thống', quantity: 25 },
@@ -316,7 +328,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Đùi gà chiên giòn sốt cay ngọt',
             price: 85000,
             description: 'Đùi gà tẩm bột chiên vàng giòn rụm phủ sốt tương ớt cay ngọt',
-            categoryId: catChien.id,
+            categoryName: 'Món Chiên & Rán',
             ingredients: [
                 { name: 'Đùi gà tươi', quantity: 300 },
                 { name: 'Bột chiên giòn', quantity: 60 },
@@ -329,7 +341,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Tôm chiên hoàng bào sốt bơ',
             price: 160000,
             description: 'Tôm sú bọc sợi khoai tây chiên vàng giòn ăn cùng sốt bơ trứng béo ngậy',
-            categoryId: catChien.id,
+            categoryName: 'Món Chiên & Rán',
             ingredients: [
                 { name: 'Tôm sú tươi', quantity: 250 },
                 { name: 'Khoai tây', quantity: 120 },
@@ -342,7 +354,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Ba chỉ heo chiên giòn bì sốt me',
             price: 115000,
             description: 'Thịt ba chỉ luộc sơ rồi chiên nổ cốm giòn tan chấm sốt me chua cay',
-            categoryId: catChien.id,
+            categoryName: 'Món Chiên & Rán',
             ingredients: [
                 { name: 'Thịt ba chỉ heo', quantity: 250 },
                 { name: 'Giấm gạo', quantity: 15 },
@@ -355,7 +367,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Đậu phụ tẩm hành chiên giòn',
             price: 45000,
             description: 'Đậu phụ làng Mơ rán vàng giòn nhúng mỡ hành béo ngậy thơm nức',
-            categoryId: catChien.id,
+            categoryName: 'Món Chiên & Rán',
             ingredients: [
                 { name: 'Đậu phụ tươi', quantity: 3 },
                 { name: 'Hành lá', quantity: 40 },
@@ -369,7 +381,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Sườn non heo nướng mật ong',
             price: 150000,
             description: 'Sườn non heo chặt dẻ ướp sốt mật ong, hành tỏi, ngũ vị hương nướng than hoa',
-            categoryId: catNuong.id,
+            categoryName: 'Món Nướng',
             ingredients: [
                 { name: 'Sườn non heo', quantity: 350 },
                 { name: 'Ngũ vị hương', quantity: 1 },
@@ -382,7 +394,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Bò nướng tảng sốt tiêu đen',
             price: 185000,
             description: 'Bò thăn nướng tảng nguyên bản xém cạnh ăn kèm sốt tiêu đen thơm nồng',
-            categoryId: catNuong.id,
+            categoryName: 'Món Nướng',
             ingredients: [
                 { name: 'Thịt thăn bò', quantity: 250 },
                 { name: 'Hạt tiêu đen xay', quantity: 10 },
@@ -395,7 +407,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Tôm sú nướng muối ớt xiêm xanh',
             price: 175000,
             description: 'Tôm sú tươi sống xiên que nướng vàng rộm chấm muối ớt xanh chua cay',
-            categoryId: catNuong.id,
+            categoryName: 'Món Nướng',
             ingredients: [
                 { name: 'Tôm sú tươi', quantity: 300 },
                 { name: 'Ớt cay tươi', quantity: 20 },
@@ -407,7 +419,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Hàu sữa nướng mỡ hành đậu phộng',
             price: 110000,
             description: 'Set 6 con hàu sữa béo ngậy nướng mỡ hành hoa và lạc rang giòn',
-            categoryId: catNuong.id,
+            categoryName: 'Món Nướng',
             ingredients: [
                 { name: 'Hàu sữa tươi', quantity: 6 },
                 { name: 'Hành lá', quantity: 40 },
@@ -419,7 +431,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Hàu sữa nướng phô mai bỏ lò',
             price: 120000,
             description: 'Set 6 con hàu sữa phủ đẫm phô mai Mozzarella nướng kéo sợi',
-            categoryId: catNuong.id,
+            categoryName: 'Món Nướng',
             ingredients: [
                 { name: 'Hàu sữa tươi', quantity: 6 },
                 { name: 'Phô mai Mozzarella', quantity: 60 },
@@ -433,7 +445,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Gà ta hấp lá chanh tiêu ớt',
             price: 180000,
             description: 'Nửa con gà ta hoa mơ hấp cách thủy da vàng ươm, thịt ngọt thơm lừng lá chanh',
-            categoryId: catHap.id,
+            categoryName: 'Món Hấp & Luộc',
             ingredients: [
                 { name: 'Thịt gà ta', quantity: 600 },
                 { name: 'Lá chanh tươi', quantity: 15 },
@@ -447,7 +459,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Mực ống hấp gừng sả ớt hiểm',
             price: 150000,
             description: 'Mực ống tươi hấp chín tới cùng gừng sợi, sả đập dập chấm nước mắm gừng',
-            categoryId: catHap.id,
+            categoryName: 'Món Hấp & Luộc',
             ingredients: [
                 { name: 'Mực ống tươi', quantity: 300 },
                 { name: 'Gừng già', quantity: 30 },
@@ -460,7 +472,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Ngao hoa hấp sả ớt nước dừa',
             price: 85000,
             description: 'Ngao hoa béo múp hấp sả thơm và nước dừa thanh ngọt nóng hổi',
-            categoryId: catHap.id,
+            categoryName: 'Món Hấp & Luộc',
             ingredients: [
                 { name: 'Ngao hoa (nghêu)', quantity: 500 },
                 { name: 'Sả cây tươi', quantity: 40 },
@@ -472,7 +484,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Thịt ba chỉ luộc chấm mắm tôm',
             price: 110000,
             description: 'Ba chỉ heo luộc thái mỏng giòn sần sật ăn kèm dưa chuột, rau thơm',
-            categoryId: catHap.id,
+            categoryName: 'Món Hấp & Luộc',
             ingredients: [
                 { name: 'Thịt ba chỉ heo', quantity: 300 },
                 { name: 'Hành tím ta', quantity: 20 },
@@ -487,7 +499,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Thịt ba chỉ kho trứng cút',
             price: 110000,
             description: 'Thịt ba chỉ xắt con chì kho mềm rục nước dừa quyện trứng cút bùi béo',
-            categoryId: catKho.id,
+            categoryName: 'Món Kho & Om',
             ingredients: [
                 { name: 'Thịt ba chỉ heo', quantity: 250 },
                 { name: 'Trứng gà tươi', quantity: 3 },
@@ -501,7 +513,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Sườn heo rim mặn ngọt',
             price: 125000,
             description: 'Sườn non heo chiên sơ rồi rim sốt mắm đường tỏi ớt sánh nâu óng ả',
-            categoryId: catKho.id,
+            categoryName: 'Món Kho & Om',
             ingredients: [
                 { name: 'Sườn non heo', quantity: 300 },
                 { name: 'Nước mắm truyền thống', quantity: 25 },
@@ -514,7 +526,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Cá quả kho tộ tiêu xanh',
             price: 140000,
             description: 'Cá quả đồng cắt khúc kho niêu đất với riềng, thịt mỡ và tiêu đen đậm đà',
-            categoryId: catKho.id,
+            categoryName: 'Món Kho & Om',
             ingredients: [
                 { name: 'Cá quả (cá lóc)', quantity: 350 },
                 { name: 'Riềng tươi', quantity: 30 },
@@ -527,7 +539,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Ba chỉ om chuối đậu tía tô',
             price: 135000,
             description: 'Thịt ba chỉ xém cạnh om cùng chuối xanh, đậu phụ vàng ươm và lá tía tô',
-            categoryId: catKho.id,
+            categoryName: 'Món Kho & Om',
             ingredients: [
                 { name: 'Thịt ba chỉ heo', quantity: 200 },
                 { name: 'Đậu phụ tươi', quantity: 2 },
@@ -541,7 +553,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Lẩu Thái Tomyum hải sản chua cay',
             price: 349000,
             description: 'Nước lẩu Tomyum cốt dừa chua cay, tôm sú, mực ống, ngao, nấm kim châm và rau muống',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Tôm sú tươi', quantity: 200 },
                 { name: 'Mực ống tươi', quantity: 200 },
@@ -556,7 +568,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Lẩu riêu cua bắp bò sườn sụn',
             price: 369000,
             description: 'Nước lẩu riêu cua đồng thanh mát, bắp bò hoa giòn sần sật, sườn sụn và đậu rán',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Bắp bò hoa', quantity: 250 },
                 { name: 'Sườn non heo', quantity: 200 },
@@ -570,7 +582,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Lẩu nấm gà ta thảo mộc thanh ngọt',
             price: 329000,
             description: 'Gà ta nấu cùng nấm kim châm, nấm rơm, kỷ tử táo đỏ thanh mát bổ dưỡng',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Thịt gà ta', quantity: 500 },
                 { name: 'Nấm kim châm', quantity: 150 },
@@ -583,7 +595,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Lẩu cá diêu hồng nấu măng chua',
             price: 299000,
             description: 'Cá diêu hồng tươi phi lê nấu măng chua, dứa, cà chua và rau thì là thơm lừng',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Cá diêu hồng', quantity: 600 },
                 { name: 'Cà chua', quantity: 100 },
@@ -596,7 +608,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Lẩu kim chi ba chỉ bò chua cay',
             price: 319000,
             description: 'Ba chỉ bò Mỹ thái lát cuộn nấm kim châm nhúng nước lẩu kim chi đậm đà',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Ba chỉ bò Mỹ (nhập khẩu)', quantity: 350 },
                 { name: 'Nấm kim châm', quantity: 150 },
@@ -608,7 +620,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Nướng Thịt Bò Hảo Hạng kèm nấm',
             price: 380000,
             description: 'Thăn bò ướp sốt tiêu và ba chỉ bò Mỹ cuộn nấm kim châm nướng bơ tỏi',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Thịt thăn bò', quantity: 200 },
                 { name: 'Ba chỉ bò Mỹ (nhập khẩu)', quantity: 250 },
@@ -620,7 +632,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Nướng Ba Chỉ Heo & Nạc Vai ngũ vị',
             price: 280000,
             description: 'Thịt ba chỉ heo dầy dặn và nạc vai ướp sốt ngũ vị nướng cháy cạnh thơm lừng',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Thịt ba chỉ heo', quantity: 250 },
                 { name: 'Thịt nạc vai heo', quantity: 250 },
@@ -632,7 +644,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Nướng Hải Sản Tổng Hợp bơ tỏi',
             price: 420000,
             description: 'Tôm sú tươi, mực ống khía hoa, bạch tuộc và hàu nướng mỡ hành tại bàn',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Tôm sú tươi', quantity: 200 },
                 { name: 'Mực ống tươi', quantity: 200 },
@@ -645,7 +657,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Combo Nướng Lẩu Gia Đình 4-6 người',
             price: 650000,
             description: 'Đại tiệc gồm 1 set nướng bò heo tổng hợp và 1 nồi lẩu Thái hải sản kèm mì bún',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Ba chỉ bò Mỹ (nhập khẩu)', quantity: 300 },
                 { name: 'Thịt ba chỉ heo', quantity: 200 },
@@ -660,7 +672,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Set Nướng VIP Bò & Hải Sản thượng hạng',
             price: 850000,
             description: 'Thăn bò hảo hạng, cá hồi Na Uy, tôm sú loại 1 và hàu phô mai sang trọng',
-            categoryId: catLau.id,
+            categoryName: 'Món Canh & Lẩu',
             ingredients: [
                 { name: 'Thịt thăn bò', quantity: 300 },
                 { name: 'Cá hồi Na Uy (nhập khẩu)', quantity: 200 },
@@ -675,7 +687,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Trà đào cam sả thanh nhiệt',
             price: 45000,
             description: 'Trà đào ủ lạnh kết hợp cam tươi mọng nước, sả thơm và 2 miếng đào giòn',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Cốt trà đào', quantity: 20 },
                 { name: 'Sả cây tươi', quantity: 15 },
@@ -687,7 +699,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Trà chanh mật ong hoa đậu biếc',
             price: 35000,
             description: 'Trà chanh truyền thống biến tấu cùng sắc xanh hoa đậu biếc và mật ong',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Cốt trà xanh khô', quantity: 15 },
                 { name: 'Chanh tươi', quantity: 1 },
@@ -698,7 +710,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Trà dâu tây tuyết nhĩ',
             price: 42000,
             description: 'Trà hoa quả chua ngọt dịu mát từ dâu tây tươi và thạch tuyết nhĩ',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Cốt trà xanh khô', quantity: 15 },
                 { name: 'Đường nước siro', quantity: 30 },
@@ -708,7 +720,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Trà tắc sả gừng tươi',
             price: 32000,
             description: 'Vị chua của quất tươi kết hợp hương cay ấm của gừng và sả đập dập',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Cốt trà xanh khô', quantity: 15 },
                 { name: 'Gừng già', quantity: 15 },
@@ -720,7 +732,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Cà phê đen đá truyền thống',
             price: 30000,
             description: 'Cà phê Robusta pha phin đậm đà thơm nồng nàn vị đắng mộc',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Cà phê bột nguyên chất', quantity: 25 },
                 { name: 'Đường cát trắng', quantity: 10 },
@@ -730,7 +742,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Cà phê sữa đá Sài Gòn',
             price: 35000,
             description: 'Cà phê phin hòa quyện cùng sữa đặc béo ngậy ngọt ngào',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Cà phê bột nguyên chất', quantity: 25 },
                 { name: 'Sữa đặc có đường', quantity: 1 },
@@ -740,7 +752,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Nước chanh tươi đá đường',
             price: 28000,
             description: 'Chanh tươi vắt nguyên chất giải nhiệt mùa hè',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Chanh tươi', quantity: 2 },
                 { name: 'Đường cát trắng', quantity: 25 },
@@ -750,7 +762,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Nước ép dưa hấu tươi mát',
             price: 35000,
             description: '100% dưa hấu tươi nguyên chất ép lạnh ngọt thanh',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Đường nước siro', quantity: 15 },
             ]
@@ -759,7 +771,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Nước cam tươi nguyên chất',
             price: 42000,
             description: 'Cam sành tươi vắt tay nhiều tép cam mọng nước giàu vitamin C',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Đường cát trắng', quantity: 20 },
             ]
@@ -768,7 +780,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Sinh tố bơ dừa tươi',
             price: 45000,
             description: 'Bơ sáp béo ngậy xay nhuyễn cùng nước cốt dừa và sữa tươi',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Sữa tươi không đường', quantity: 60 },
                 { name: 'Sữa đặc có đường', quantity: 1 },
@@ -779,7 +791,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Ly bia tươi lạnh 330ml',
             price: 25000,
             description: 'Bia tươi hơi rót từ vòi mát lạnh, bọt mịn sánh xốp (Ly 330ml)',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Bia tươi (Draft Beer)', quantity: 0.33 },
             ]
@@ -788,7 +800,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Ca bia tươi 1 Lít',
             price: 65000,
             description: 'Ca bia tươi rót trực tiếp dung tích 1 Lít cho bàn nhậu',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Bia tươi (Draft Beer)', quantity: 1.0 },
             ]
@@ -797,29 +809,29 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Tháp bia tươi 3 Lít',
             price: 180000,
             description: 'Tháp bia tươi có lõi giữ lạnh dung tích 3 Lít cực đã',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
             ingredients: [
                 { name: 'Bia tươi (Draft Beer)', quantity: 3.0 },
             ]
         },
-        // Đồ đóng lon bán trực tiếp (không qua chế biến)
+        // Đồ đóng lon bán trực tiếp
         {
             name: 'Nước ngọt Coca Cola lon 330ml',
             price: 20000,
             description: 'Nước ngọt có ga Coca Cola lon ướp lạnh',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
         },
         {
             name: 'Nước ngọt 7Up lon 330ml',
             price: 20000,
             description: 'Nước ngọt có ga vị chanh 7Up lon mát lạnh',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
         },
         {
             name: 'Nước suối tinh khiết Aquafina 500ml',
             price: 15000,
             description: 'Nước uống đóng chai tinh khiết Aquafina 500ml',
-            categoryId: catDoUong.id,
+            categoryName: 'Đồ Uống & Bia',
         },
 
         // --- 9. MÓN TRÁNG MIỆNG (4 món) ---
@@ -827,7 +839,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Chè khúc bạch long nhãn hạt chia',
             price: 38000,
             description: 'Khúc bạch phô mai mềm mịn, long nhãn giòn ngọt nước đường phèn hạnh nhân',
-            categoryId: catTrangMieng.id,
+            categoryName: 'Món Tráng Miệng',
             ingredients: [
                 { name: 'Sữa tươi không đường', quantity: 50 },
                 { name: 'Đường cát trắng', quantity: 20 },
@@ -837,7 +849,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Chè hạt sen long nhãn thanh mát',
             price: 35000,
             description: 'Hạt sen bùi thơm lồng long nhãn ngọt thanh mát bổ dưỡng',
-            categoryId: catTrangMieng.id,
+            categoryName: 'Món Tráng Miệng',
             ingredients: [
                 { name: 'Đường cát trắng', quantity: 20 },
             ]
@@ -846,7 +858,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Đĩa hoa quả tươi thập cẩm theo mùa',
             price: 60000,
             description: 'Dưa hấu, ổi, thanh long, dứa thái lát tươi mát kèm muối chấm cay',
-            categoryId: catTrangMieng.id,
+            categoryName: 'Món Tráng Miệng',
             ingredients: [
                 { name: 'Dưa chuột (dưa leo)', quantity: 100 },
                 { name: 'Muối tinh', quantity: 10 },
@@ -856,7 +868,7 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
             name: 'Kem tươi vani sốt socola',
             price: 30000,
             description: '2 viên kem vani Pháp béo ngậy rưới sốt socola Bỉ đậm đà',
-            categoryId: catTrangMieng.id,
+            categoryName: 'Món Tráng Miệng',
             ingredients: [
                 { name: 'Sữa tươi không đường', quantity: 40 },
                 { name: 'Sữa đặc có đường', quantity: 1 },
@@ -864,50 +876,52 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
         },
     ];
 
-    let totalRecipes = 0;
+    let newItemsCount = 0;
+    let newRecipesCount = 0;
     for (const item of menuItemsData) {
-        const { ingredients, ...menuItemFields } = item;
-        const createdMenuItem = await prisma.menuItem.create({ data: menuItemFields });
+        const { ingredients, categoryName, ...menuItemFields } = item;
+        const categoryId = categoryMap[categoryName];
 
-        if (ingredients && ingredients.length > 0) {
-            for (const ing of ingredients) {
-                const ingredientId = ingredientMap[ing.name];
-                if (ingredientId) {
-                    await prisma.menuItemIngredient.create({
-                        data: {
-                            menuItemId: createdMenuItem.id,
-                            ingredientId: ingredientId,
-                            quantity: ing.quantity,
-                        }
-                    });
-                    totalRecipes++;
+        let menuItem = await prisma.menuItem.findFirst({ where: { name: item.name } });
+        if (!menuItem) {
+            menuItem = await prisma.menuItem.create({
+                data: {
+                    ...menuItemFields,
+                    categoryId,
+                }
+            });
+            newItemsCount++;
+
+            if (ingredients && ingredients.length > 0) {
+                for (const ing of ingredients) {
+                    const ingredientId = ingredientMap[ing.name];
+                    if (ingredientId) {
+                        await prisma.menuItemIngredient.create({
+                            data: {
+                                menuItemId: menuItem.id,
+                                ingredientId,
+                                quantity: ing.quantity,
+                            }
+                        });
+                        newRecipesCount++;
+                    }
                 }
             }
         }
     }
 
-    console.log(`  ✅ Đã tạo ${menuItemsData.length} món ăn phân bổ chuẩn theo phương pháp chế biến`);
-    console.log(`  ✅ Đã thiết lập ${totalRecipes} liên kết công thức định mức trừ kho`);
-    console.log('🎉 [GÓI 1] Hoàn tất nạp dữ liệu Bếp & Thực đơn thành công!\n');
+    console.log(`  ✅ Đã bổ sung ${newItemsCount} món ăn mới (Tổng số món dự kiến: 60)`);
+    console.log(`  ✅ Đã bổ sung ${newRecipesCount} công thức định mức trừ kho`);
+    console.log('🎉 [GÓI 1 - BỔ SUNG] Hoàn tất nạp dữ liệu Bếp & Thực đơn thành công!\n');
 }
 
-// Tự kích hoạt khi chạy lẻ trực tiếp bằng tsx
-if (require.main === module || process.argv[1]?.includes('goi_1_bep_va_thuc_don')) {
-    const prisma = new PrismaClient();
-    (async () => {
-        try {
-            console.log('🧹 [GÓI 1] Đang dọn dẹp dữ liệu cũ của Bếp & Thực đơn...');
-            await prisma.menuItemIngredient.deleteMany();
-            await prisma.menuItem.deleteMany();
-            await prisma.ingredient.deleteMany();
-            await prisma.category.deleteMany();
-            await seedGoi1BepVaThucDon(prisma);
-        } catch (e) {
-            console.error('❌ Lỗi khi chạy Gói 1:', e);
-            process.exit(1);
-        } finally {
-            await prisma.$disconnect();
-        }
-    })();
-}
-
+// Chạy trực tiếp độc lập khi gọi file này
+const prismaInstance = new PrismaClient();
+seedGoi1BepVaThucDon(prismaInstance)
+    .catch((e) => {
+        console.error('❌ Lỗi khi chạy Gói 1:', e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prismaInstance.$disconnect();
+    });

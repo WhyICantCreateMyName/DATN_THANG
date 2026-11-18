@@ -5,10 +5,10 @@ import { PrismaClient, Role, TableStatus, DiscountType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
-    console.log('🤝 [GÓI 2] Đang khởi tạo Đối tác, Nhân sự, 30 Khách hàng, 5 Bàn & Voucher...');
+    console.log('🤝 [GÓI 2 - BỔ SUNG] Đang nạp thêm Đối tác, Nhân sự, 30 Khách hàng & Voucher vào hệ thống...');
 
     // ==========================================
-    // 1. TẠO 8 NHÀ CUNG CẤP KHỚP 8 NHÓM NGUYÊN LIỆU
+    // 1. TẠO 8 NHÀ CUNG CẤP KHỚP 8 NHÓM NGUYÊN LIỆU (NẾU CHƯA CÓ)
     // ==========================================
     const suppliersData = [
         {
@@ -53,13 +53,18 @@ export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
         },
     ];
 
+    let newSuppliersCount = 0;
     for (const sup of suppliersData) {
-        await prisma.supplier.create({ data: sup });
+        const existing = await prisma.supplier.findFirst({ where: { name: sup.name } });
+        if (!existing) {
+            await prisma.supplier.create({ data: sup });
+            newSuppliersCount++;
+        }
     }
-    console.log(`  ✅ Đã tạo ${suppliersData.length} nhà cung cấp đại diện 8 nhóm nguồn hàng`);
+    console.log(`  ✅ Đã đồng bộ 8 nhà cung cấp (thêm mới: ${newSuppliersCount})`);
 
     // ==========================================
-    // 2. TẠO HỆ THỐNG NHÂN VIÊN (MẬT KHẨU: 123456)
+    // 2. TẠO HOẶC CẬP NHẬT NHÂN VIÊN (UPSERT - TRÁNH LỖI TRÙNG USERNAME)
     // ==========================================
     const plainPassword = '123456';
     const saltRounds = 10;
@@ -104,11 +109,20 @@ export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
         },
     ];
 
-    await prisma.user.createMany({ data: usersData });
-    console.log(`  ✅ Đã tạo ${usersData.length} nhân sự đầy đủ phân quyền ADMIN, CASHIER, KITCHEN`);
+    for (const u of usersData) {
+        await prisma.user.upsert({
+            where: { username: u.username },
+            update: {
+                fullName: u.fullName,
+                role: u.role,
+            },
+            create: u,
+        });
+    }
+    console.log(`  ✅ Đã đồng bộ ${usersData.length} tài khoản nhân sự (admin, manager, waiter1, cashier1, kitchen1, chef_leader)`);
 
     // ==========================================
-    // 3. TẠO 30 KHÁCH HÀNG THỰC TẾ
+    // 3. TẠO HOẶC CẬP NHẬT 30 KHÁCH HÀNG THỰC TẾ (UPSERT THEO PHONE)
     // ==========================================
     const customersData = [
         { phone: '0912345678', name: 'Nguyễn Văn An' },
@@ -143,11 +157,17 @@ export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
         { phone: '0975887711', name: 'Nghiêm Thùy Chi' },
     ];
 
-    await prisma.customer.createMany({ data: customersData });
-    console.log(`  ✅ Đã tạo ${customersData.length} khách hàng thành viên thực tế`);
+    for (const cus of customersData) {
+        await prisma.customer.upsert({
+            where: { phone: cus.phone },
+            update: { name: cus.name },
+            create: cus,
+        });
+    }
+    console.log(`  ✅ Đã đồng bộ ${customersData.length} khách hàng thành viên thực tế`);
 
     // ==========================================
-    // 4. TẠO SƠ ĐỒ 5 BÀN ĂN (GIỮ NGUYÊN STARTER SEED)
+    // 4. KIỂM TRA SƠ ĐỒ 5 BÀN ĂN (GIỮ NGUYÊN STARTER SEED)
     // ==========================================
     const tablesData = [
         { name: '1', capacity: 2, qrCode: 'QR_TABLE_01', status: TableStatus.AVAILABLE },
@@ -157,11 +177,18 @@ export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
         { name: 'Vip 1', capacity: 8, qrCode: 'QR_VIP_01', status: TableStatus.AVAILABLE },
     ];
 
-    await prisma.table.createMany({ data: tablesData });
-    console.log(`  ✅ Đã tạo ${tablesData.length} bàn ăn giữ nguyên chuẩn starter seed`);
+    let newTablesCount = 0;
+    for (const t of tablesData) {
+        const existing = await prisma.table.findFirst({ where: { name: t.name } });
+        if (!existing) {
+            await prisma.table.create({ data: t });
+            newTablesCount++;
+        }
+    }
+    console.log(`  ✅ Đã đảm bảo sơ đồ bàn ăn (Bàn 1, 2, 3, 4, Vip 1)`);
 
     // ==========================================
-    // 5. TẠO 5 CHƯƠNG TRÌNH KHUYẾN MÃI (VOUCHER)
+    // 5. TẠO HOẶC CẬP NHẬT 5 CHƯƠNG TRÌNH KHUYẾN MÃI (UPSERT THEO CODE)
     // ==========================================
     const vouchersData = [
         {
@@ -207,29 +234,31 @@ export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
         },
     ];
 
-    await prisma.voucher.createMany({ data: vouchersData });
-    console.log(`  ✅ Đã tạo ${vouchersData.length} mã voucher khuyến mãi đa dạng`);
-    console.log('🎉 [GÓI 2] Hoàn tất nạp dữ liệu Đối tác & Khách hàng thành công!\n');
+    for (const v of vouchersData) {
+        await prisma.voucher.upsert({
+            where: { code: v.code },
+            update: {
+                description: v.description,
+                discountType: v.discountType,
+                discountValue: v.discountValue,
+                maxDiscount: v.maxDiscount,
+                minOrderValue: v.minOrderValue,
+                isActive: v.isActive,
+            },
+            create: v,
+        });
+    }
+    console.log(`  ✅ Đã đồng bộ 5 mã voucher khuyến mãi đa dạng`);
+    console.log('🎉 [GÓI 2 - BỔ SUNG] Hoàn tất nạp dữ liệu Đối tác & Khách hàng thành công!\n');
 }
 
-// Tự kích hoạt khi chạy lẻ trực tiếp bằng tsx
-if (require.main === module || process.argv[1]?.includes('goi_2_doi_tac_va_khach_hang')) {
-    const prisma = new PrismaClient();
-    (async () => {
-        try {
-            console.log('🧹 [GÓI 2] Đang dọn dẹp dữ liệu cũ của Đối tác, Nhân sự & Khách hàng...');
-            await prisma.voucher.deleteMany();
-            await prisma.customer.deleteMany();
-            await prisma.supplier.deleteMany();
-            await prisma.table.deleteMany();
-            await prisma.user.deleteMany();
-            await seedGoi2DoiTacVaKhachHang(prisma);
-        } catch (e) {
-            console.error('❌ Lỗi khi chạy Gói 2:', e);
-            process.exit(1);
-        } finally {
-            await prisma.$disconnect();
-        }
-    })();
-}
-
+// Chạy trực tiếp độc lập khi gọi file này
+const prismaInstance = new PrismaClient();
+seedGoi2DoiTacVaKhachHang(prismaInstance)
+    .catch((e) => {
+        console.error('❌ Lỗi khi chạy Gói 2:', e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prismaInstance.$disconnect();
+    });
