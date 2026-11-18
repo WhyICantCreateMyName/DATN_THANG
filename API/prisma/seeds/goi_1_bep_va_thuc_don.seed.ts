@@ -894,8 +894,20 @@ export async function seedGoi1BepVaThucDon(prisma: PrismaClient) {
 // Tự kích hoạt khi chạy lẻ trực tiếp bằng tsx
 if (require.main === module || process.argv[1]?.includes('goi_1_bep_va_thuc_don')) {
     const prisma = new PrismaClient();
-    seedGoi1BepVaThucDon(prisma)
-        .catch(console.error)
-        .finally(() => prisma.$disconnect());
+    (async () => {
+        try {
+            console.log('🧹 [GÓI 1] Đang dọn dẹp dữ liệu cũ của Bếp & Thực đơn...');
+            await prisma.menuItemIngredient.deleteMany();
+            await prisma.menuItem.deleteMany();
+            await prisma.ingredient.deleteMany();
+            await prisma.category.deleteMany();
+            await seedGoi1BepVaThucDon(prisma);
+        } catch (e) {
+            console.error('❌ Lỗi khi chạy Gói 1:', e);
+            process.exit(1);
+        } finally {
+            await prisma.$disconnect();
+        }
+    })();
 }
 

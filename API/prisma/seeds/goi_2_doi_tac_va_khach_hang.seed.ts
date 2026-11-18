@@ -215,8 +215,21 @@ export async function seedGoi2DoiTacVaKhachHang(prisma: PrismaClient) {
 // Tự kích hoạt khi chạy lẻ trực tiếp bằng tsx
 if (require.main === module || process.argv[1]?.includes('goi_2_doi_tac_va_khach_hang')) {
     const prisma = new PrismaClient();
-    seedGoi2DoiTacVaKhachHang(prisma)
-        .catch(console.error)
-        .finally(() => prisma.$disconnect());
+    (async () => {
+        try {
+            console.log('🧹 [GÓI 2] Đang dọn dẹp dữ liệu cũ của Đối tác, Nhân sự & Khách hàng...');
+            await prisma.voucher.deleteMany();
+            await prisma.customer.deleteMany();
+            await prisma.supplier.deleteMany();
+            await prisma.table.deleteMany();
+            await prisma.user.deleteMany();
+            await seedGoi2DoiTacVaKhachHang(prisma);
+        } catch (e) {
+            console.error('❌ Lỗi khi chạy Gói 2:', e);
+            process.exit(1);
+        } finally {
+            await prisma.$disconnect();
+        }
+    })();
 }
 
