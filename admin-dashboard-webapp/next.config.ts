@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     ];
   },
   // Allow Cloudflare Tunnel domain for HMR
-  allowedDevOrigins: ['admin.thanhcanghaiphong.online', 'https://admin.thanhcanghaiphong.online', 'ql.nhahang.website', 'https://ql.nhahang.website'],
+  allowedDevOrigins: ['ql.thanhcanghaiphong.online', 'https://admin.thanhcanghaiphong.online'],
   
   webpack: (config, { dev, isServer }) => {
     // Optimization for HMR over tunnel/proxy
