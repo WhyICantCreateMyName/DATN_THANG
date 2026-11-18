@@ -5,10 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch index.ts",
-    "seed": "prisma db seed",
-    "seed:all": "tsx prisma/seed.ts",
-    "seed:goi1": "tsx prisma/seeds/goi_1_bep_va_thuc_don.seed.ts",
-    "seed:goi2": "tsx prisma/seeds/goi_2_doi_tac_va_khach_hang.seed.ts"
+    "seed": "prisma db seed"
   },
   "keywords": [],
   "author": "",
