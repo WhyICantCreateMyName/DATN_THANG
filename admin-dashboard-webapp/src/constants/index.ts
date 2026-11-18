@@ -2,11 +2,11 @@ export default {
     url: {
         api: {
             // baseUrl: "/api"
-            production: "https://api.nhahang.website",
+            production: "https://api.thanhcanghaiphong.online",
             development: "http://localhost:4000",
         },
         client: {
-            production: "https://www.nhahang.website",
+            production: "https://www.thanhcanghaiphong.online",
             development: "http://localhost:6688",
             order: (qrCode: string) => `/menu/${qrCode}`
         }

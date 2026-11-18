@@ -7,9 +7,9 @@ export const initSocket = (httpServer: HttpServer) => {
     io = new Server(httpServer, {
         cors: {
             origin: [
-                "https://ql.nhahang.website", 
-                "https://www.nhahang.website", 
-                "https://nhahang.website"
+                "https://admin.thanhcanghaiphong.online", 
+                "https://www.thanhcanghaiphong.online", 
+                "https://thanhcanghaiphong.online"
             ],
             methods: ["GET", "POST"],
             credentials: true

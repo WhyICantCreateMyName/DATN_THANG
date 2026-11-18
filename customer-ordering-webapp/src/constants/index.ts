@@ -1,7 +1,7 @@
 const constants = {
     url: {
         api: {
-            production: 'https://api.nhahang.website',
+            production: 'https://api.thanhcanghaiphong.online',
             development: "http://localhost:4000",
         }
     },
